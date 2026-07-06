@@ -43,6 +43,20 @@ data class AniListCharactersData(val Media: AniListCharacterMedia?)
 data class AniListCharacterMedia(val characters: AniListCharacterConnection?)
 data class AniListCharacterConnection(val edges: List<AniListCharacterEdge> = emptyList())
 
+data class AniListScheduleResponse(
+    val data: AniListScheduleData?,
+    val errors: List<AniListError>? = null
+)
+data class AniListScheduleData(val Page: AniListSchedulePage?)
+data class AniListSchedulePage(val airingSchedules: List<AniListAiringSchedule> = emptyList())
+
+/** One episode's airing slot, e.g. "episode 12 of X airs at this Unix time." */
+data class AniListAiringSchedule(
+    val airingAt: Long,
+    val episode: Int,
+    val media: AniListMedia
+)
+
 // --- Core anime model -----------------------------------------------------
 
 data class AniListMedia(
