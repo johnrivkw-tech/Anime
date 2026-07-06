@@ -6,11 +6,12 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-@Database(entities = [Anime::class], version = 5, exportSchema = false)
+@Database(entities = [Anime::class, ChatMessageEntity::class], version = 6, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AnimeDatabase : RoomDatabase() {
 
     abstract fun animeDao(): AnimeDao
+    abstract fun chatDao(): ChatDao
 
     companion object {
         @Volatile
