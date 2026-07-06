@@ -1,7 +1,7 @@
 package com.example.animetracker.ui.theme
 
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
 import com.example.animetracker.R
 
@@ -15,5 +15,3 @@ private val pacifico = GoogleFont(name = "Pacifico")
 
 /** Cursive wordmark font, used only for the "Vizora" brand overlay. */
 val VizoraLogoFont = FontFamily(
-    Font(googleFont = pacifico, fontProvider = fontProvider)
-)
