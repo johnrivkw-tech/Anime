@@ -2,6 +2,7 @@ package com.example.animetracker.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,17 +43,12 @@ import com.example.animetracker.ui.theme.Pulse
 import com.example.animetracker.ui.theme.VizoraLogoFont
 import java.util.Locale
 
-/**
- * The signature moment of the app: a full-bleed hero banner (Crunchyroll-style)
- * with the "Vizora" wordmark floating in cursive over the top-left of the
- * artwork, and the AI action sitting where a search icon would normally go
- * (top-right, over the image, not in a separate app bar).
- */
 @Composable
 fun FeaturedBanner(
     item: HomeCardItem?,
     onClick: () -> Unit,
     onAiClick: () -> Unit,
+    onSearchClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (item == null) {
@@ -70,7 +67,6 @@ fun FeaturedBanner(
         modifier = modifier
             .fillMaxWidth()
             .height(420.dp)
-            .clip(RoundedCornerShapeBottomOnly())
             .clickable(onClick = onClick)
     ) {
         AsyncImage(
@@ -80,7 +76,6 @@ fun FeaturedBanner(
             modifier = Modifier.fillMaxSize()
         )
 
-        // Vertical scrim for legibility.
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -91,7 +86,6 @@ fun FeaturedBanner(
                     )
                 )
         )
-        // Blaze-tinted wash from the bottom-left corner.
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -102,8 +96,6 @@ fun FeaturedBanner(
                     )
                 )
         )
-        // Dark scrim behind the top row so the wordmark and icon stay legible
-        // even over bright artwork.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -116,8 +108,6 @@ fun FeaturedBanner(
                 )
         )
 
-        // Top row: cursive "Vizora" wordmark (left) + AI action (right, where
-        // a search icon normally sits).
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -133,18 +123,33 @@ fun FeaturedBanner(
                 fontSize = 32.sp,
                 color = Bone
             )
-            IconButton(
-                onClick = onAiClick,
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.35f))
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.SmartToy,
-                    contentDescription = "AI Recommendations",
-                    tint = Pulse
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                IconButton(
+                    onClick = onAiClick,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.35f))
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.SmartToy,
+                        contentDescription = "AI Recommendations",
+                        tint = Pulse
+                    )
+                }
+                IconButton(
+                    onClick = onSearchClick,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.35f))
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Search,
+                        contentDescription = "Search",
+                        tint = Bone
+                    )
+                }
             }
         }
 
