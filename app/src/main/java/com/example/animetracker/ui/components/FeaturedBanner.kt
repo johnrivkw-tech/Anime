@@ -12,11 +12,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,27 +31,34 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.animetracker.ui.model.HomeCardItem
 import com.example.animetracker.ui.theme.Blaze
 import com.example.animetracker.ui.theme.Bone
 import com.example.animetracker.ui.theme.Charcoal
 import com.example.animetracker.ui.theme.Pulse
+import com.example.animetracker.ui.theme.VizoraLogoFont
 import java.util.Locale
 
 /**
- * The signature moment of the app: a full-bleed banner with a diagonal-feel
- * gradient (dark from both the bottom AND a hard corner wash of Blaze) and
- * an oversized display title, instead of a quiet centered card.
+ * The signature moment of the app: a full-bleed hero banner (Crunchyroll-style)
+ * with the "Vizora" wordmark floating in cursive over the top-left of the
+ * artwork, and the AI action sitting where a search icon would normally go
+ * (top-right, over the image, not in a separate app bar).
  */
 @Composable
-fun FeaturedBanner(item: HomeCardItem?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun FeaturedBanner(
+    item: HomeCardItem?,
+    onClick: () -> Unit,
+    onAiClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     if (item == null) {
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .height(260.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .height(420.dp)
                 .background(Charcoal)
         ) {
             CircularProgressIndicator(color = Blaze, modifier = Modifier.align(Alignment.Center))
@@ -60,8 +69,8 @@ fun FeaturedBanner(item: HomeCardItem?, onClick: () -> Unit, modifier: Modifier 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(260.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .height(420.dp)
+            .clip(RoundedCornerShapeBottomOnly())
             .clickable(onClick = onClick)
     ) {
         AsyncImage(
@@ -71,19 +80,18 @@ fun FeaturedBanner(item: HomeCardItem?, onClick: () -> Unit, modifier: Modifier 
             modifier = Modifier.fillMaxSize()
         )
 
-        // Vertical scrim for legibility...
+        // Vertical scrim for legibility.
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.90f)),
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.92f)),
                         startY = 60f
                     )
                 )
         )
-        // ...plus a Blaze-tinted wash from the bottom-left corner — the
-        // one deliberate flourish this screen is allowed.
+        // Blaze-tinted wash from the bottom-left corner.
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -94,6 +102,51 @@ fun FeaturedBanner(item: HomeCardItem?, onClick: () -> Unit, modifier: Modifier 
                     )
                 )
         )
+        // Dark scrim behind the top row so the wordmark and icon stay legible
+        // even over bright artwork.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp)
+                .align(Alignment.TopCenter)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent)
+                    )
+                )
+        )
+
+        // Top row: cursive "Vizora" wordmark (left) + AI action (right, where
+        // a search icon normally sits).
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+                .padding(horizontal = 16.dp)
+                .padding(top = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Vizora",
+                fontFamily = VizoraLogoFont,
+                fontSize = 32.sp,
+                color = Bone
+            )
+            IconButton(
+                onClick = onAiClick,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.35f))
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.SmartToy,
+                    contentDescription = "AI Recommendations",
+                    tint = Pulse
+                )
+            }
+        }
 
         Column(modifier = Modifier.align(Alignment.BottomStart).padding(20.dp)) {
             Text(
