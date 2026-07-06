@@ -52,7 +52,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,6 +69,8 @@ import com.example.animetracker.data.Anime
 import com.example.animetracker.data.AnimeStatus
 import com.example.animetracker.data.network.AniListCharacterEdge
 import com.example.animetracker.data.network.AniListMedia
+import com.example.animetracker.data.network.AniListTrailer
+import com.example.animetracker.ui.components.TrailerPlayerDialog
 import com.example.animetracker.ui.theme.Blaze
 import com.example.animetracker.ui.theme.Bone
 import com.example.animetracker.ui.theme.Charcoal
@@ -92,6 +96,7 @@ fun AnimeDetailsScreen(
     val context = LocalContext.current
 
     val localEntry = remember(allLocal, aniListId) { allLocal.firstOrNull { it.aniListId == aniListId } }
+    var youtubeTrailerId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(aniListId) {
         viewModel.loadAnimeDetails(aniListId)
@@ -175,12 +180,22 @@ fun AnimeDetailsScreen(
                     onRemove = { entry -> viewModel.deleteAnime(entry) },
                     onRate = { entry, rating -> viewModel.rateAnime(entry, rating) },
                     onMarkEpisodeWatched = { entry -> viewModel.incrementEpisode(entry) },
-                    onWatchTrailer = { url ->
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    onWatchTrailer = { trailer ->
+                        if (trailer.site.equals("youtube", ignoreCase = true) && trailer.id != null) {
+                            youtubeTrailerId = trailer.id
+                        } else {
+                            trailer.videoUrl?.let { url ->
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            }
+                        }
                     }
                 )
             }
         }
+    }
+
+    youtubeTrailerId?.let { videoId ->
+        TrailerPlayerDialog(videoId = videoId, onDismiss = { youtubeTrailerId = null })
     }
 }
 
@@ -194,7 +209,7 @@ private fun DetailsContent(
     onRemove: (Anime) -> Unit,
     onRate: (Anime, Int) -> Unit,
     onMarkEpisodeWatched: (Anime) -> Unit,
-    onWatchTrailer: (String) -> Unit
+    onWatchTrailer: (AniListTrailer) -> Unit
 ) {
     val scroll = rememberScrollState()
 
@@ -276,11 +291,11 @@ private fun DetailsContent(
                     }
                 }
 
-                val trailerUrl = details.trailer?.videoUrl
-                if (trailerUrl != null) {
+                val trailer = details.trailer
+                if (trailer != null) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
-                        onClick = { onWatchTrailer(trailerUrl) },
+                        onClick = { onWatchTrailer(trailer) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Blaze, contentColor = Bone)
