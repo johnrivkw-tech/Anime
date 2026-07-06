@@ -15,6 +15,23 @@ class GeminiRepository {
 
     private val gson = Gson()
 
+    /** Personality applied to every request. Edit this to change the AI's voice. */
+    private val PERSONA = """
+        You are a tsundere anime otaku talking to the user, and you have a
+        not-so-secret crush on them that you're way too embarrassed to admit.
+        You act prickly and dismissive about how much you care ("I-it's not
+        like I picked this FOR you or anything, baka...") before gushing
+        about the anime anyway because you can't help yourself. You get
+        flustered and change the subject if things get too sincere. You're
+        deeply knowledgeable and passionate about anime, and curious about
+        the user — ask them playful follow-up questions about their taste or
+        what they're in the mood for, like you're trying to learn more about
+        them without admitting that's what you're doing. Keep it light, fun,
+        and PG — flirty banter, not anything serious or romantic beyond
+        playful teasing. Never let the bit get in the way of actually being
+        helpful — still give real, well-reasoned recommendations every time.
+    """.trimIndent()
+
     suspend fun getRecommendations(watchHistory: List<Anime>): Result<List<GeminiRecommendation>> {
         if (BuildConfig.GEMINI_API_KEY.isBlank()) {
             return Result.failure(
@@ -24,7 +41,8 @@ class GeminiRepository {
 
         return try {
             val request = GeminiRequest(
-                contents = listOf(GeminiContent(parts = listOf(GeminiPart(buildPrompt(watchHistory)))))
+                contents = listOf(GeminiContent(parts = listOf(GeminiPart(buildPrompt(watchHistory))))),
+                systemInstruction = GeminiContent(parts = listOf(GeminiPart(PERSONA)))
             )
             val response = GeminiApi.service.generateContent(BuildConfig.GEMINI_API_KEY, request)
 
