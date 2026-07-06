@@ -15,5 +15,6 @@ data class HomeCardItem(
     val bannerUrl: String?,
     val score: Double?,
     val statusLabel: String?,
-    val progressText: String?
+    val progressText: String?,
+    val genres: List<String> = emptyList()
 )
