@@ -26,6 +26,7 @@ import com.example.animetracker.ui.navigation.Destination
 import com.example.animetracker.ui.screens.HomeFeedScreen
 import com.example.animetracker.ui.screens.HomeScreen
 import com.example.animetracker.ui.screens.ProfileScreen
+import com.example.animetracker.ui.screens.ScheduleScreen
 import com.example.animetracker.ui.screens.SearchScreen
 import com.example.animetracker.ui.screens.SplashScreen
 import com.example.animetracker.ui.theme.AnimeTrackerTheme
@@ -79,6 +80,13 @@ private fun VizoraApp() {
             }
             composable(Destination.MY_LIST.route) {
                 HomeScreen(viewModel = viewModel)
+            }
+            composable(Destination.SCHEDULE.route) {
+                ScheduleScreen(
+                    viewModel = viewModel,
+                    onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") },
+                    onSearchClick = { navController.navigate("search") }
+                )
             }
             composable("search") {
                 SearchScreen(
