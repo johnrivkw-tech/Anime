@@ -88,6 +88,36 @@ private val CHARACTERS_QUERY = """
     }
 """.trimIndent()
 
+// Uses a leaner field set than MEDIA_FIELDS (no trailer/description/banner)
+// since the Schedule screen only ever renders a poster thumbnail + title.
+private val AIRING_SCHEDULE_QUERY = """
+    query(${'$'}airingAtGreater: Int, ${'$'}airingAtLesser: Int, ${'$'}perPage: Int) {
+      Page(perPage: ${'$'}perPage) {
+        airingSchedules(
+          airingAt_greater: ${'$'}airingAtGreater
+          airingAt_lesser: ${'$'}airingAtLesser
+          sort: TIME
+        ) {
+          airingAt
+          episode
+          media {
+            id
+            idMal
+            title { romaji english native }
+            episodes
+            duration
+            averageScore
+            rawStatus: status
+            season
+            seasonYear
+            coverImage { extraLarge large }
+            genres
+          }
+        }
+      }
+    }
+""".trimIndent()
+
 /**
  * Wraps calls to the AniList GraphQL API and turns network/GraphQL errors
  * into a [Result], so the ViewModel doesn't need to know about Retrofit,
@@ -180,6 +210,30 @@ class AniListRepository {
         )
         checkErrors(response.errors)
         response.data?.Media?.characters?.edges ?: emptyList()
+    }
+
+    /**
+     * Every episode airing between [dayStartEpochSeconds] and
+     * [dayEndEpochSeconds] (both Unix seconds, so pass local-midnight
+     * boundaries for a given calendar day), oldest first — powers the
+     * Schedule tab's per-day list.
+     */
+    suspend fun getAiringSchedule(
+        dayStartEpochSeconds: Long,
+        dayEndEpochSeconds: Long
+    ): Result<List<AniListAiringSchedule>> = safeCall {
+        val response = AniListApi.service.getAiringSchedule(
+            AniListRequest(
+                query = AIRING_SCHEDULE_QUERY,
+                variables = mapOf(
+                    "airingAtGreater" to dayStartEpochSeconds,
+                    "airingAtLesser" to dayEndEpochSeconds,
+                    "perPage" to 50
+                )
+            )
+        )
+        checkErrors(response.errors)
+        response.data?.Page?.airingSchedules ?: emptyList()
     }
 
     private suspend fun fetchList(
