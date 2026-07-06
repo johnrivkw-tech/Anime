@@ -84,6 +84,12 @@ implementation(libs.navigation.compose)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
+    // In-app YouTube trailer playback (free, no API key — wraps the YouTube
+    // IFrame Player API in a WebView). Check for a newer version at
+    // https://github.com/PierfrancescoSoffritti/android-youtube-player
+    implementation("com.pierfrancescosoffritti.androidyoutubeplayer:core:12.1.0")
+
+
     // Tests
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
