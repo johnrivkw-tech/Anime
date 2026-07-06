@@ -10,6 +10,7 @@ import com.example.animetracker.data.AnimeRepository
 import com.example.animetracker.data.AnimeStatus
 import com.example.animetracker.data.ChatRepository
 import com.example.animetracker.data.ProfilePrefs
+import com.example.animetracker.data.network.AniListAiringSchedule
 import com.example.animetracker.data.network.AniListCharacterEdge
 import com.example.animetracker.data.network.AniListMedia
 import com.example.animetracker.data.network.AniListRepository
@@ -33,6 +34,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.time.LocalDate
+import java.time.ZoneId
 import java.io.FileOutputStream
 
 class AnimeViewModel(application: Application) : AndroidViewModel(application) {
@@ -180,6 +183,19 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     // --- Profile: aggregate watchlist stats (local) ---
     val profileStats: StateFlow<ProfileStats>
 
+    // --- Schedule tab ---
+    private val _scheduleDate = MutableStateFlow(LocalDate.now())
+    val scheduleDate: StateFlow<LocalDate> = _scheduleDate.asStateFlow()
+
+    private val _scheduleEntries = MutableStateFlow<List<AniListAiringSchedule>>(emptyList())
+    val scheduleEntries: StateFlow<List<AniListAiringSchedule>> = _scheduleEntries.asStateFlow()
+
+    private val _isScheduleLoading = MutableStateFlow(false)
+    val isScheduleLoading: StateFlow<Boolean> = _isScheduleLoading.asStateFlow()
+
+    private val _scheduleError = MutableStateFlow<String?>(null)
+    val scheduleError: StateFlow<String?> = _scheduleError.asStateFlow()
+
     init {
         val database = AnimeDatabase.getDatabase(application)
         repository = AnimeRepository(database.animeDao())
@@ -258,6 +274,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         loadHomeFeed()
         loadDiscover()
         loadAiRecommendations()
+        loadSchedule()
     }
 
     fun onSearchQueryChange(query: String) {
@@ -424,6 +441,32 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                     episodeDurationMinutes = result.duration
                 )
             )
+        }
+    }
+
+    // --- Schedule tab ---
+
+    fun selectScheduleDate(date: LocalDate) {
+        _scheduleDate.value = date
+        loadSchedule(date)
+    }
+
+    fun loadSchedule(date: LocalDate = _scheduleDate.value) {
+        viewModelScope.launch {
+            _isScheduleLoading.value = true
+            _scheduleError.value = null
+
+            val zone = ZoneId.systemDefault()
+            val dayStart = date.atStartOfDay(zone).toEpochSecond()
+            val dayEnd = date.plusDays(1).atStartOfDay(zone).toEpochSecond()
+
+            aniListRepository.getAiringSchedule(dayStart, dayEnd)
+                .onSuccess { _scheduleEntries.value = it }
+                .onFailure { e ->
+                    _scheduleError.value = e.message ?: "Couldn't load the schedule. Check your connection and try again."
+                }
+
+            _isScheduleLoading.value = false
         }
     }
 
