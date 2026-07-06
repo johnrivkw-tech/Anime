@@ -8,6 +8,7 @@ import com.example.animetracker.data.Anime
 import com.example.animetracker.data.AnimeDatabase
 import com.example.animetracker.data.AnimeRepository
 import com.example.animetracker.data.AnimeStatus
+import com.example.animetracker.data.ChatRepository
 import com.example.animetracker.data.ProfilePrefs
 import com.example.animetracker.data.network.AniListCharacterEdge
 import com.example.animetracker.data.network.AniListMedia
@@ -37,6 +38,7 @@ import java.io.FileOutputStream
 class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: AnimeRepository
+    private lateinit var chatRepository: ChatRepository
     private val aniListRepository = AniListRepository()
     private val geminiRepository = GeminiRepository()
     private val geminiChatRepository = GeminiChatRepository()
@@ -98,8 +100,9 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     val aiRecommendationsError: StateFlow<String?> = _aiRecommendationsError.asStateFlow()
 
     // --- AI recs chat ---
-    private val _chatMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
-    val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
+    // Backed by Room (via chatRepository) instead of an in-memory list, so
+    // the conversation survives app restarts, not just rotation.
+    val chatMessages: StateFlow<List<ChatMessage>>
 
     private val _isChatLoading = MutableStateFlow(false)
     val isChatLoading: StateFlow<Boolean> = _isChatLoading.asStateFlow()
@@ -178,8 +181,15 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     val profileStats: StateFlow<ProfileStats>
 
     init {
-        val dao = AnimeDatabase.getDatabase(application).animeDao()
-        repository = AnimeRepository(dao)
+        val database = AnimeDatabase.getDatabase(application)
+        repository = AnimeRepository(database.animeDao())
+        chatRepository = ChatRepository(database.chatDao())
+
+        chatMessages = chatRepository.messages.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
 
         filteredAnime = combine(
             repository.allAnime,
@@ -341,13 +351,19 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         if (text.isBlank() || _isChatLoading.value) return
 
         viewModelScope.launch {
-            _chatMessages.value = _chatMessages.value + ChatMessage(isUser = true, text = text)
+            // Snapshot the history BEFORE inserting the new message: Room's
+            // Flow updates asynchronously, so chatMessages.value might not
+            // reflect the insert we're about to do until the next emission.
+            val historySoFar = chatMessages.value
+            val userMessage = ChatMessage(isUser = true, text = text)
+            chatRepository.addMessage(userMessage)
+
             _isChatLoading.value = true
             _chatError.value = null
 
             val watched = repository.allAnime.first()
                 .filter { it.status != AnimeStatus.PLAN_TO_WATCH }
-            val conversation = _chatMessages.value.map { it.isUser to it.text }
+            val conversation = (historySoFar + userMessage).map { it.isUser to it.text }
 
             geminiChatRepository.sendMessage(conversation, watched)
                 .onSuccess { chatReply ->
@@ -355,10 +371,8 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                         aniListRepository.searchAnime(rec.title).getOrNull()?.firstOrNull()
                     }.map { it.toHomeCardItem(localByAniListId.value[it.id]) }
 
-                    _chatMessages.value = _chatMessages.value + ChatMessage(
-                        isUser = false,
-                        text = chatReply.reply,
-                        recommendations = enrichedRecs
+                    chatRepository.addMessage(
+                        ChatMessage(isUser = false, text = chatReply.reply, recommendations = enrichedRecs)
                     )
                 }
                 .onFailure { e ->
@@ -370,7 +384,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clearChat() {
-        _chatMessages.value = emptyList()
+        viewModelScope.launch { chatRepository.clearAll() }
         _chatError.value = null
     }
 
