@@ -12,7 +12,8 @@ fun AniListMedia.toHomeCardItem(localStatus: AnimeStatus?): HomeCardItem = HomeC
     bannerUrl = bannerImage,
     score = score,
     statusLabel = localStatus?.label,
-    progressText = null
+    progressText = null,
+    genres = genres
 )
 
 fun Anime.toHomeCardItem(): HomeCardItem = HomeCardItem(
