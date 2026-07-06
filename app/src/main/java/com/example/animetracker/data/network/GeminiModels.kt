@@ -10,7 +10,8 @@ package com.example.animetracker.data.network
 
 data class GeminiRequest(
     val contents: List<GeminiContent>,
-    val generationConfig: GeminiGenerationConfig = GeminiGenerationConfig()
+    val generationConfig: GeminiGenerationConfig = GeminiGenerationConfig(),
+    val systemInstruction: GeminiContent? = null
 )
 
 data class GeminiContent(val parts: List<GeminiPart>, val role: String? = null)
