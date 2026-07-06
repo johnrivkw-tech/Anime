@@ -15,3 +15,5 @@ private val pacifico = GoogleFont(name = "Pacifico")
 
 /** Cursive wordmark font, used only for the "Vizora" brand overlay. */
 val VizoraLogoFont = FontFamily(
+    Font(googleFont = pacifico, fontProvider = fontProvider)
+)
