@@ -23,7 +23,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.animetracker.ui.navigation.BottomNavBar
 import com.example.animetracker.ui.navigation.Destination
-import com.example.animetracker.ui.screens.DiscoverScreen
 import com.example.animetracker.ui.screens.HomeFeedScreen
 import com.example.animetracker.ui.screens.HomeScreen
 import com.example.animetracker.ui.screens.ProfileScreen
@@ -74,22 +73,18 @@ private fun VizoraApp() {
                 HomeFeedScreen(
                     viewModel = viewModel,
                     onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") },
-                    onChatClick = { navController.navigate("ai_chat") }
+                    onChatClick = { navController.navigate("ai_chat") },
+                    onSearchClick = { navController.navigate("search") }
                 )
             }
             composable(Destination.MY_LIST.route) {
                 HomeScreen(viewModel = viewModel)
             }
-            composable(Destination.DISCOVER.route) {
-                DiscoverScreen(
-                    viewModel = viewModel,
-                    onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") }
-                )
-            }
-            composable(Destination.SEARCH.route) {
+            composable("search") {
                 SearchScreen(
                     viewModel = viewModel,
-                    onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") }
+                    onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") },
+                    onBack = { navController.popBackStack() }
                 )
             }
             composable(Destination.PROFILE.route) {
