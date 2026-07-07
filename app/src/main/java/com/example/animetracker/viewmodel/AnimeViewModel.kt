@@ -1,7 +1,9 @@
 package com.example.animetracker.viewmodel
 
 import android.app.Application
+import android.content.Intent
 import android.net.Uri
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.animetracker.data.Anime
@@ -9,6 +11,11 @@ import com.example.animetracker.data.AnimeDatabase
 import com.example.animetracker.data.AnimeRepository
 import com.example.animetracker.data.AnimeStatus
 import com.example.animetracker.data.ChatRepository
+import com.example.animetracker.data.LightNovelEntity
+import com.example.animetracker.data.LightNovelFolderPrefs
+import com.example.animetracker.data.LightNovelRepository
+import com.example.animetracker.data.MangaEntity
+import com.example.animetracker.data.MangaRepository
 import com.example.animetracker.data.ProfilePrefs
 import com.example.animetracker.data.network.AniListAiringSchedule
 import com.example.animetracker.data.network.AniListCharacterEdge
@@ -16,7 +23,11 @@ import com.example.animetracker.data.network.AniListMedia
 import com.example.animetracker.data.network.AniListRepository
 import com.example.animetracker.data.network.GeminiChatRepository
 import com.example.animetracker.data.network.GeminiRepository
+import com.example.animetracker.data.network.MangaDexChapter
+import com.example.animetracker.data.network.MangaDexManga
+import com.example.animetracker.data.network.MangaDexRepository
 import com.example.animetracker.ui.model.ChatMessage
+import com.example.animetracker.ui.model.FolderPdf
 import com.example.animetracker.ui.model.HomeCardItem
 import com.example.animetracker.ui.model.ProfileStats
 import com.example.animetracker.ui.model.toHomeCardItem
@@ -42,10 +53,14 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: AnimeRepository
     private lateinit var chatRepository: ChatRepository
+    private lateinit var lightNovelRepository: LightNovelRepository
+    private lateinit var mangaRepository: MangaRepository
     private val aniListRepository = AniListRepository()
+    private val mangaDexRepository = MangaDexRepository()
     private val geminiRepository = GeminiRepository()
     private val geminiChatRepository = GeminiChatRepository()
     private val profilePrefs = ProfilePrefs(application)
+    private val lightNovelFolderPrefs = LightNovelFolderPrefs(application)
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -196,10 +211,75 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _scheduleError = MutableStateFlow<String?>(null)
     val scheduleError: StateFlow<String?> = _scheduleError.asStateFlow()
 
+    // --- Light novels tab ---
+    val lightNovels: StateFlow<List<LightNovelEntity>>
+
+    private val _linkedFolderUri = MutableStateFlow(lightNovelFolderPrefs.getFolderUri())
+    val linkedFolderUri: StateFlow<String?> = _linkedFolderUri.asStateFlow()
+
+    private val _linkedFolderName = MutableStateFlow<String?>(null)
+    val linkedFolderName: StateFlow<String?> = _linkedFolderName.asStateFlow()
+
+    private val _folderNovels = MutableStateFlow<List<FolderPdf>>(emptyList())
+    val folderNovels: StateFlow<List<FolderPdf>> = _folderNovels.asStateFlow()
+
+    // --- Manga: library (Room-backed) ---
+    val mangaLibrary: StateFlow<List<MangaEntity>>
+
+    // --- Manga: search ---
+    private val _mangaSearchQuery = MutableStateFlow("")
+    val mangaSearchQuery: StateFlow<String> = _mangaSearchQuery.asStateFlow()
+
+    private val _mangaSearchResults = MutableStateFlow<List<MangaDexManga>>(emptyList())
+    val mangaSearchResults: StateFlow<List<MangaDexManga>> = _mangaSearchResults.asStateFlow()
+
+    private val _isMangaSearchLoading = MutableStateFlow(false)
+    val isMangaSearchLoading: StateFlow<Boolean> = _isMangaSearchLoading.asStateFlow()
+
+    private val _mangaSearchError = MutableStateFlow<String?>(null)
+    val mangaSearchError: StateFlow<String?> = _mangaSearchError.asStateFlow()
+
+    // --- Manga: chapters for whichever manga was last tapped ---
+    private val _selectedMangaTitle = MutableStateFlow<String?>(null)
+    val selectedMangaTitle: StateFlow<String?> = _selectedMangaTitle.asStateFlow()
+
+    private val _mangaChapters = MutableStateFlow<List<MangaDexChapter>>(emptyList())
+    val mangaChapters: StateFlow<List<MangaDexChapter>> = _mangaChapters.asStateFlow()
+
+    private val _isChaptersLoading = MutableStateFlow(false)
+    val isChaptersLoading: StateFlow<Boolean> = _isChaptersLoading.asStateFlow()
+
+    private val _chaptersError = MutableStateFlow<String?>(null)
+    val chaptersError: StateFlow<String?> = _chaptersError.asStateFlow()
+
+    // --- Manga: pages for whichever chapter was last opened ---
+    private val _chapterPages = MutableStateFlow<List<String>>(emptyList())
+    val chapterPages: StateFlow<List<String>> = _chapterPages.asStateFlow()
+
+    private val _isPagesLoading = MutableStateFlow(false)
+    val isPagesLoading: StateFlow<Boolean> = _isPagesLoading.asStateFlow()
+
+    private val _pagesError = MutableStateFlow<String?>(null)
+    val pagesError: StateFlow<String?> = _pagesError.asStateFlow()
+
     init {
         val database = AnimeDatabase.getDatabase(application)
         repository = AnimeRepository(database.animeDao())
         chatRepository = ChatRepository(database.chatDao())
+        lightNovelRepository = LightNovelRepository(database.lightNovelDao())
+        mangaRepository = MangaRepository(database.mangaDao())
+
+        lightNovels = lightNovelRepository.allNovels.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
+
+        mangaLibrary = mangaRepository.allManga.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
 
         chatMessages = chatRepository.messages.stateIn(
             scope = viewModelScope,
@@ -275,6 +355,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         loadDiscover()
         loadAiRecommendations()
         loadSchedule()
+        scanLinkedFolder()
     }
 
     fun onSearchQueryChange(query: String) {
@@ -467,6 +548,173 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
             _isScheduleLoading.value = false
+        }
+    }
+
+    // --- Light novels tab ---
+
+    fun addLightNovel(title: String, uri: String) {
+        viewModelScope.launch { lightNovelRepository.addNovel(title, uri) }
+    }
+
+    fun removeLightNovel(novel: LightNovelEntity) {
+        viewModelScope.launch { lightNovelRepository.removeNovel(novel) }
+    }
+
+    /**
+     * Called after the UI has already taken a persistable read permission
+     * on [uri] via ContentResolver — this just remembers the folder and
+     * scans it.
+     */
+    fun linkFolder(uri: Uri) {
+        lightNovelFolderPrefs.setFolderUri(uri.toString())
+        _linkedFolderUri.value = uri.toString()
+        scanLinkedFolder()
+    }
+
+    fun unlinkFolder() {
+        _linkedFolderUri.value?.let { uriString ->
+            try {
+                getApplication<Application>().contentResolver.releasePersistableUriPermission(
+                    Uri.parse(uriString),
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (e: SecurityException) {
+                // Permission was already gone; nothing to clean up.
+            }
+        }
+        lightNovelFolderPrefs.setFolderUri(null)
+        _linkedFolderUri.value = null
+        _linkedFolderName.value = null
+        _folderNovels.value = emptyList()
+    }
+
+    /** Re-reads the linked folder's contents. Safe to call any time (e.g. a pull-to-refresh). */
+    fun scanLinkedFolder() {
+        val uriString = _linkedFolderUri.value ?: return
+
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val tree = DocumentFile.fromTreeUri(getApplication(), Uri.parse(uriString))
+                    val name = tree?.name
+                    val pdfs = tree?.listFiles()
+                        ?.filter { doc ->
+                            doc.isFile &&
+                                (doc.type == "application/pdf" || doc.name?.endsWith(".pdf", ignoreCase = true) == true)
+                        }
+                        ?.map { doc ->
+                            FolderPdf(
+                                title = doc.name?.removeSuffix(".pdf") ?: "Untitled",
+                                uri = doc.uri.toString()
+                            )
+                        }
+                        ?.sortedBy { it.title.lowercase() }
+                        ?: emptyList()
+                    name to pdfs
+                }
+            }
+
+            result.onSuccess { (name, pdfs) ->
+                _linkedFolderName.value = name
+                _folderNovels.value = pdfs
+            }.onFailure {
+                // Folder likely got moved/deleted/permission revoked outside
+                // the app; unlink so the UI doesn't keep showing a dead link.
+                unlinkFolder()
+            }
+        }
+    }
+
+    // --- Manga: search ---
+
+    fun onMangaSearchQueryChange(query: String) {
+        _mangaSearchQuery.value = query
+    }
+
+    fun searchManga(query: String) {
+        if (query.isBlank()) {
+            _mangaSearchResults.value = emptyList()
+            return
+        }
+        viewModelScope.launch {
+            _isMangaSearchLoading.value = true
+            _mangaSearchError.value = null
+
+            mangaDexRepository.searchManga(query)
+                .onSuccess { _mangaSearchResults.value = it }
+                .onFailure { e ->
+                    _mangaSearchError.value = e.message ?: "Couldn't search MangaDex. Check your connection and try again."
+                }
+
+            _isMangaSearchLoading.value = false
+        }
+    }
+
+    fun clearMangaSearch() {
+        _mangaSearchQuery.value = ""
+        _mangaSearchResults.value = emptyList()
+        _mangaSearchError.value = null
+    }
+
+    fun addMangaToLibrary(manga: MangaDexManga) {
+        viewModelScope.launch {
+            mangaRepository.addManga(
+                MangaEntity(
+                    mangaDexId = manga.id,
+                    title = manga.displayTitle,
+                    coverUrl = manga.coverUrl
+                )
+            )
+        }
+    }
+
+    fun removeMangaFromLibrary(manga: MangaEntity) {
+        viewModelScope.launch { mangaRepository.removeManga(manga) }
+    }
+
+    // --- Manga: chapters ---
+
+    /**
+     * Call this the moment a manga is tapped (search result or library
+     * item) — [title] gets stored immediately so the Chapters screen has
+     * something to show in its header before the chapter list itself
+     * finishes loading.
+     */
+    fun loadChapters(mangaId: String, title: String) {
+        _selectedMangaTitle.value = title
+        _mangaChapters.value = emptyList()
+        _chaptersError.value = null
+
+        viewModelScope.launch {
+            _isChaptersLoading.value = true
+
+            mangaDexRepository.getChapters(mangaId)
+                .onSuccess { _mangaChapters.value = it }
+                .onFailure { e ->
+                    _chaptersError.value = e.message ?: "Couldn't load chapters. Check your connection and try again."
+                }
+
+            _isChaptersLoading.value = false
+        }
+    }
+
+    // --- Manga: reader ---
+
+    fun loadChapterPages(chapterId: String) {
+        _chapterPages.value = emptyList()
+        _pagesError.value = null
+
+        viewModelScope.launch {
+            _isPagesLoading.value = true
+
+            mangaDexRepository.getPageUrls(chapterId)
+                .onSuccess { _chapterPages.value = it }
+                .onFailure { e ->
+                    _pagesError.value = e.message ?: "Couldn't load this chapter. Check your connection and try again."
+                }
+
+            _isPagesLoading.value = false
         }
     }
 
