@@ -21,10 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.animetracker.ui.components.VizoraWordmark
 import com.example.animetracker.ui.theme.Bone
 import com.example.animetracker.ui.theme.Charcoal
 import com.example.animetracker.ui.theme.CharcoalHigh
@@ -85,13 +84,7 @@ fun SplashScreen() {
                     .padding(top = 72.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "Vizora",
-                    fontFamily = FontFamily.Cursive,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 44.sp,
-                    color = Bone
-                )
+                VizoraWordmark(fontSize = 40.sp, markSize = 40.dp)
             }
 
             Column(
