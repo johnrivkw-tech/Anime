@@ -89,6 +89,10 @@ implementation(libs.navigation.compose)
     // https://github.com/PierfrancescoSoffritti/android-youtube-player
     implementation("com.pierfrancescosoffritti.androidyoutubeplayer:core:12.1.0")
 
+    // Reading the contents of a user-linked folder (Storage Access
+    // Framework tree URI) for the Light Novels folder-watch feature.
+    implementation("androidx.documentfile:documentfile:1.0.1")
+
 
     // Tests
     testImplementation(libs.junit)
