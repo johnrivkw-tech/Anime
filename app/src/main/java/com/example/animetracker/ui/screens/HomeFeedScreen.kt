@@ -31,6 +31,7 @@ fun HomeFeedScreen(
     viewModel: AnimeViewModel,
     onAnimeClick: (Int) -> Unit,
     onChatClick: () -> Unit,
+    onReadingClick: () -> Unit,
     onSearchClick: () -> Unit
 ) {
     val trending by viewModel.trending.collectAsState()
@@ -97,6 +98,7 @@ fun HomeFeedScreen(
                         item = trendingItems.firstOrNull(),
                         onClick = { trendingItems.firstOrNull()?.aniListId?.let(onAnimeClick) },
                         onAiClick = onChatClick,
+                        onReadingClick = onReadingClick,
                         onSearchClick = onSearchClick
                     )
                     Spacer(modifier = Modifier.height(20.dp))
