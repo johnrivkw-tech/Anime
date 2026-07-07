@@ -16,13 +16,21 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,6 +55,7 @@ fun FeaturedBanner(
     item: HomeCardItem?,
     onClick: () -> Unit,
     onAiClick: () -> Unit,
+    onReadingClick: () -> Unit,
     onSearchClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -132,18 +141,42 @@ fun FeaturedBanner(
         ) {
             VizoraWordmark(fontSize = 26.sp, markSize = 26.dp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(
-                    onClick = onAiClick,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.35f))
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.AutoAwesome,
-                        contentDescription = "Ask Lena",
-                        tint = Pulse
-                    )
+                var menuExpanded by remember { mutableStateOf(false) }
+                Box {
+                    IconButton(
+                        onClick = { menuExpanded = true },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.35f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Menu,
+                            contentDescription = "Menu",
+                            tint = Bone
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Lena AI") },
+                            leadingIcon = { Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Pulse) },
+                            onClick = {
+                                menuExpanded = false
+                                onAiClick()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Reading") },
+                            leadingIcon = { Icon(Icons.Filled.MenuBook, contentDescription = null, tint = Blaze) },
+                            onClick = {
+                                menuExpanded = false
+                                onReadingClick()
+                            }
+                        )
+                    }
                 }
                 IconButton(
                     onClick = onSearchClick,
