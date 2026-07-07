@@ -15,9 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,7 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,8 +39,8 @@ import com.example.animetracker.ui.theme.Blaze
 import com.example.animetracker.ui.theme.Bone
 import com.example.animetracker.ui.theme.Charcoal
 import com.example.animetracker.ui.theme.Pulse
-import com.example.animetracker.ui.theme.VizoraLogoFont
-import java.util.Locale
+import com.example.animetracker.ui.theme.Smoke
+import com.example.animetracker.ui.theme.Void
 
 @Composable
 fun FeaturedBanner(
@@ -51,11 +50,16 @@ fun FeaturedBanner(
     onSearchClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Near-full-screen hero, like a streaming app's home banner, instead of
+    // a fixed short strip — leaves just enough peeking through at the
+    // bottom to hint that there's more to scroll to.
+    val bannerHeight = (LocalConfiguration.current.screenHeightDp * 0.86f).dp
+
     if (item == null) {
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .height(420.dp)
+                .height(bannerHeight)
                 .background(Charcoal)
         ) {
             CircularProgressIndicator(color = Blaze, modifier = Modifier.align(Alignment.Center))
@@ -66,23 +70,30 @@ fun FeaturedBanner(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(420.dp)
+            .height(bannerHeight)
             .clickable(onClick = onClick)
     ) {
         AsyncImage(
-            model = item.bannerUrl ?: item.imageUrl,
+            model = item.imageUrl ?: item.bannerUrl,
             contentDescription = item.title,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
 
+        // Bottom fade: starts subtle, ends fully opaque so the banner
+        // blends seamlessly into the page background below it instead of
+        // showing a hard edge where the image ends.
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.92f)),
-                        startY = 60f
+                        colorStops = arrayOf(
+                            0.0f to Color.Transparent,
+                            0.45f to Color.Black.copy(alpha = 0.55f),
+                            0.75f to Color.Black.copy(alpha = 0.92f),
+                            1.0f to Void
+                        )
                     )
                 )
         )
@@ -91,19 +102,21 @@ fun FeaturedBanner(
                 .fillMaxSize()
                 .background(
                     Brush.radialGradient(
-                        colors = listOf(Blaze.copy(alpha = 0.35f), Color.Transparent),
-                        radius = 420f
+                        colors = listOf(Blaze.copy(alpha = 0.30f), Color.Transparent),
+                        radius = 500f
                     )
                 )
         )
+        // Subtle top scrim so status-bar icons stay legible over the
+        // artwork now that the banner extends behind them.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(100.dp)
+                .height(140.dp)
                 .align(Alignment.TopCenter)
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent)
+                        colors = listOf(Color.Black.copy(alpha = 0.5f), Color.Transparent)
                     )
                 )
         )
@@ -113,16 +126,11 @@ fun FeaturedBanner(
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
                 .padding(horizontal = 16.dp)
-                .padding(top = 12.dp),
+                .padding(top = 48.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Vizora",
-                fontFamily = VizoraLogoFont,
-                fontSize = 32.sp,
-                color = Bone
-            )
+            VizoraWordmark(fontSize = 26.sp, markSize = 26.dp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IconButton(
                     onClick = onAiClick,
@@ -132,8 +140,8 @@ fun FeaturedBanner(
                         .background(Color.Black.copy(alpha = 0.35f))
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.SmartToy,
-                        contentDescription = "AI Recommendations",
+                        imageVector = Icons.Filled.AutoAwesome,
+                        contentDescription = "Ask Lena",
                         tint = Pulse
                     )
                 }
@@ -155,36 +163,21 @@ fun FeaturedBanner(
 
         Column(modifier = Modifier.align(Alignment.BottomStart).padding(20.dp)) {
             Text(
-                text = "FEATURED",
-                style = MaterialTheme.typography.labelLarge,
-                color = Pulse,
-                fontWeight = FontWeight.Black
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
                 text = item.title,
                 style = MaterialTheme.typography.displayLarge,
                 color = Bone,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            if (item.score != null) {
+            if (item.genres.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Star,
-                        contentDescription = null,
-                        tint = Pulse,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = String.format(Locale.US, "%.1f", item.score),
-                        color = Bone,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                Text(
+                    text = item.genres.joinToString(", "),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Smoke,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
