@@ -25,6 +25,9 @@ import com.example.animetracker.ui.navigation.BottomNavBar
 import com.example.animetracker.ui.navigation.Destination
 import com.example.animetracker.ui.screens.HomeFeedScreen
 import com.example.animetracker.ui.screens.HomeScreen
+import com.example.animetracker.ui.screens.LightNovelsScreen
+import com.example.animetracker.ui.screens.MangaChaptersScreen
+import com.example.animetracker.ui.screens.MangaReaderScreen
 import com.example.animetracker.ui.screens.ProfileScreen
 import com.example.animetracker.ui.screens.ScheduleScreen
 import com.example.animetracker.ui.screens.SearchScreen
@@ -75,6 +78,7 @@ private fun VizoraApp() {
                     viewModel = viewModel,
                     onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") },
                     onChatClick = { navController.navigate("ai_chat") },
+                    onReadingClick = { navController.navigate("reading") },
                     onSearchClick = { navController.navigate("search") }
                 )
             }
@@ -97,6 +101,25 @@ private fun VizoraApp() {
             }
             composable(Destination.PROFILE.route) {
                 ProfileScreen(viewModel = viewModel)
+            }
+            composable("reading") {
+                LightNovelsScreen(
+                    viewModel = viewModel,
+                    onMangaSelected = { navController.navigate("manga_chapters") }
+                )
+            }
+            composable("manga_chapters") {
+                MangaChaptersScreen(
+                    viewModel = viewModel,
+                    onChapterClick = { navController.navigate("manga_reader") },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable("manga_reader") {
+                MangaReaderScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() }
+                )
             }
             composable("ai_chat") {
                 AiChatScreen(
