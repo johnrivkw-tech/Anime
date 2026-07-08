@@ -1,5 +1,6 @@
 package com.example.animetracker.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,11 +20,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -44,7 +45,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.example.animetracker.R
 import com.example.animetracker.ui.components.AnimePosterCard
 import com.example.animetracker.ui.model.ChatMessage
 import com.example.animetracker.ui.theme.Blaze
@@ -79,9 +83,16 @@ fun AiChatScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.SmartToy, contentDescription = null, tint = Blaze)
+                        Image(
+                            painter = painterResource(id = R.drawable.lena),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("AI Recs")
+                        Text("Lena AI")
                     }
                 },
                 navigationIcon = {
@@ -96,7 +107,6 @@ fun AiChatScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Charcoal)
-                    .navigationBarsPadding()
                     .imePadding()
             ) {
                 if (error != null) {
@@ -147,43 +157,49 @@ fun AiChatScreen(
             }
         }
     ) { paddingValues ->
-        if (messages.isEmpty() && !isLoading) {
-            Column(
+        Box(modifier = Modifier.fillMaxSize()) {
+            Image(
+                painter = painterResource(id = R.drawable.chat_bg),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    Icons.Filled.SmartToy,
-                    contentDescription = null,
-                    tint = Smoke,
-                    modifier = Modifier.size(48.dp)
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "Ask me for anime recommendations — I'll factor in what you've already watched.",
-                    color = Smoke,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(messages) { message ->
-                    ChatBubble(message = message, onAnimeClick = onAnimeClick)
+                    .background(Charcoal.copy(alpha = 0.72f))
+            )
+            if (messages.isEmpty() && !isLoading) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "Hey, I'm Vladilena Milize. I am your assistant for recommending anime.",
+                        color = Bone,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
-                if (isLoading) {
-                    item { TypingBubble() }
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentPadding = PaddingValues(vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(messages) { message ->
+                        ChatBubble(message = message, onAnimeClick = onAnimeClick)
+                    }
+                    if (isLoading) {
+                        item { TypingBubble() }
+                    }
                 }
             }
         }
