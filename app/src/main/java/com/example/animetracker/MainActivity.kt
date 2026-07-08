@@ -2,6 +2,7 @@ package com.example.animetracker
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,6 +64,10 @@ private fun VizoraApp() {
         return
     }
 
+    val backToHome: () -> Unit = {
+        navController.popBackStack(Destination.HOME.route, false)
+    }
+
     Scaffold(
         bottomBar = { BottomNavBar(navController = navController) }
     ) { paddingValues ->
@@ -103,22 +108,25 @@ private fun VizoraApp() {
                 ProfileScreen(viewModel = viewModel)
             }
             composable("reading") {
+                BackHandler(onBack = backToHome)
                 LightNovelsScreen(
                     viewModel = viewModel,
                     onMangaSelected = { navController.navigate("manga_chapters") }
                 )
             }
             composable("manga_chapters") {
+                BackHandler(onBack = backToHome)
                 MangaChaptersScreen(
                     viewModel = viewModel,
                     onChapterClick = { navController.navigate("manga_reader") },
-                    onBack = { navController.popBackStack() }
+                    onBack = backToHome
                 )
             }
             composable("manga_reader") {
+                BackHandler(onBack = backToHome)
                 MangaReaderScreen(
                     viewModel = viewModel,
-                    onBack = { navController.popBackStack() }
+                    onBack = backToHome
                 )
             }
             composable("ai_chat") {
