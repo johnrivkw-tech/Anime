@@ -105,7 +105,10 @@ private fun VizoraApp() {
                 )
             }
             composable(Destination.PROFILE.route) {
-                ProfileScreen(viewModel = viewModel)
+                ProfileScreen(
+                    viewModel = viewModel,
+                    onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") }
+                )
             }
             composable("reading") {
                 BackHandler(onBack = backToHome)
