@@ -95,8 +95,8 @@ fun HomeFeedScreen(
             ) {
                 item {
                     FeaturedBanner(
-                        item = trendingItems.firstOrNull(),
-                        onClick = { trendingItems.firstOrNull()?.aniListId?.let(onAnimeClick) },
+                        items = trendingItems.take(5),
+                        onClick = { item -> item.aniListId?.let(onAnimeClick) },
                         onAiClick = onChatClick,
                         onReadingClick = onReadingClick,
                         onSearchClick = onSearchClick
