@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -52,19 +54,18 @@ import com.example.animetracker.ui.theme.Void
 
 @Composable
 fun FeaturedBanner(
-    item: HomeCardItem?,
-    onClick: () -> Unit,
+    items: List<HomeCardItem>,
+    onClick: (HomeCardItem) -> Unit,
     onAiClick: () -> Unit,
     onReadingClick: () -> Unit,
     onSearchClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Near-full-screen hero, like a streaming app's home banner, instead of
-    // a fixed short strip — leaves just enough peeking through at the
-    // bottom to hint that there's more to scroll to.
-    val bannerHeight = (LocalConfiguration.current.screenHeightDp * 0.86f).dp
+    // 75% of screen height hero banner, leaving the rest of the page
+    // visible below to hint that there's more to scroll to.
+    val bannerHeight = (LocalConfiguration.current.screenHeightDp * 0.75f).dp
 
-    if (item == null) {
+    if (items.isEmpty()) {
         Box(
             modifier = modifier
                 .fillMaxWidth()
@@ -76,60 +77,105 @@ fun FeaturedBanner(
         return
     }
 
+    val pagerState = rememberPagerState(pageCount = { items.size })
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(bannerHeight)
-            .clickable(onClick = onClick)
     ) {
-        AsyncImage(
-            model = item.imageUrl ?: item.bannerUrl,
-            contentDescription = item.title,
-            contentScale = ContentScale.Crop,
+        HorizontalPager(
+            state = pagerState,
             modifier = Modifier.fillMaxSize()
-        )
+        ) { page ->
+            val item = items[page]
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable { onClick(item) }
+            ) {
+                AsyncImage(
+                    model = item.imageUrl ?: item.bannerUrl,
+                    contentDescription = item.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
 
-        // Bottom fade: starts subtle, ends fully opaque so the banner
-        // blends seamlessly into the page background below it instead of
-        // showing a hard edge where the image ends.
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colorStops = arrayOf(
-                            0.0f to Color.Transparent,
-                            0.45f to Color.Black.copy(alpha = 0.55f),
-                            0.75f to Color.Black.copy(alpha = 0.92f),
-                            1.0f to Void
+                // Bottom fade: starts subtle, ends fully opaque so the banner
+                // blends seamlessly into the page background below it instead
+                // of showing a hard edge where the image ends.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0.0f to Color.Transparent,
+                                    0.45f to Color.Black.copy(alpha = 0.55f),
+                                    0.75f to Color.Black.copy(alpha = 0.92f),
+                                    1.0f to Void
+                                )
+                            )
                         )
-                    )
                 )
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(Blaze.copy(alpha = 0.30f), Color.Transparent),
-                        radius = 500f
-                    )
+                // Subtle top scrim so status-bar icons stay legible over the
+                // artwork now that the banner extends behind them.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Black.copy(alpha = 0.5f), Color.Transparent)
+                            )
+                        )
                 )
-        )
-        // Subtle top scrim so status-bar icons stay legible over the
-        // artwork now that the banner extends behind them.
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(140.dp)
-                .align(Alignment.TopCenter)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(Color.Black.copy(alpha = 0.5f), Color.Transparent)
-                    )
-                )
-        )
 
+                Column(modifier = Modifier.align(Alignment.BottomStart).padding(20.dp)) {
+                    Text(
+                        text = item.title,
+                        style = MaterialTheme.typography.displayLarge,
+                        color = Bone,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (item.genres.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = item.genres.joinToString(", "),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Smoke,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+
+        // Page indicator dots, sit just above the title block.
+        if (items.size > 1) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 20.dp, bottom = 110.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                repeat(items.size) { index ->
+                    val isSelected = pagerState.currentPage == index
+                    Box(
+                        modifier = Modifier
+                            .height(6.dp)
+                            .width(if (isSelected) 20.dp else 6.dp)
+                            .clip(CircleShape)
+                            .background(if (isSelected) Blaze else Bone.copy(alpha = 0.4f))
+                    )
+                }
+            }
+        }
+
+        // Top bar (wordmark, menu, search) stays fixed above the pager.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -191,26 +237,6 @@ fun FeaturedBanner(
                         tint = Bone
                     )
                 }
-            }
-        }
-
-        Column(modifier = Modifier.align(Alignment.BottomStart).padding(20.dp)) {
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.displayLarge,
-                color = Bone,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (item.genres.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = item.genres.joinToString(", "),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Smoke,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
             }
         }
     }
