@@ -28,6 +28,7 @@ import com.example.animetracker.data.network.MangaDexManga
 import com.example.animetracker.data.network.MangaDexRepository
 import com.example.animetracker.ui.model.ChatMessage
 import com.example.animetracker.ui.model.FolderPdf
+import com.example.animetracker.ui.model.GenreCount
 import com.example.animetracker.ui.model.HomeCardItem
 import com.example.animetracker.ui.model.ProfileStats
 import com.example.animetracker.ui.model.toHomeCardItem
@@ -72,6 +73,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     val allLocalAnime: StateFlow<List<Anime>>
     val localByAniListId: StateFlow<Map<Int, AnimeStatus>>
     val continueTracking: StateFlow<List<Anime>>
+    val favoriteAnime: StateFlow<List<HomeCardItem>>
 
     // --- Online "add anime" search (AniList) ---
     private val _searchResults = MutableStateFlow<List<AniListMedia>>(emptyList())
@@ -192,8 +194,16 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _profileDisplayName = MutableStateFlow(profilePrefs.getDisplayName())
     val profileDisplayName: StateFlow<String> = _profileDisplayName.asStateFlow()
 
+    private val _profileAvatarPath = MutableStateFlow(profilePrefs.getAvatarPath())
+    val profileAvatarPath: StateFlow<String?> = _profileAvatarPath.asStateFlow()
+
     private val _isBannerSaving = MutableStateFlow(false)
     val isBannerSaving: StateFlow<Boolean> = _isBannerSaving.asStateFlow()
+
+    private val _isAvatarSaving = MutableStateFlow(false)
+    val isAvatarSaving: StateFlow<Boolean> = _isAvatarSaving.asStateFlow()
+
+    val profileJoinedAtMillis: Long = profilePrefs.getJoinedAtMillis()
 
     // --- Profile: aggregate watchlist stats (local) ---
     val profileStats: StateFlow<ProfileStats>
@@ -328,23 +338,48 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                 initialValue = emptyList()
             )
 
-        profileStats = repository.allAnime
-            .map { list ->
-                // AniList's per-episode runtime when we have it; a flat
-                // 24 min/episode (typical TV anime) for entries that don't.
-                val totalMinutes = list.sumOf { anime ->
-                    val perEpisode = (anime.episodeDurationMinutes ?: 24).toLong()
-                    perEpisode * anime.episodesWatched
-                }
-                ProfileStats(
-                    totalAnime = list.size,
-                    completed = list.count { it.status == AnimeStatus.COMPLETED },
-                    watching = list.count { it.status == AnimeStatus.WATCHING },
-                    planToWatch = list.count { it.status == AnimeStatus.PLAN_TO_WATCH },
-                    favorites = list.count { it.isFavorite },
-                    totalWatchMinutes = totalMinutes
-                )
+        favoriteAnime = repository.allAnime
+            .map { list -> list.filter { it.isFavorite }.map { it.toHomeCardItem() } }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyList()
+            )
+
+        profileStats = combine(
+            repository.allAnime,
+            mangaRepository.allManga,
+            lightNovelRepository.allNovels
+        ) { list, manga, novels ->
+            // AniList's per-episode runtime when we have it; a flat
+            // 24 min/episode (typical TV anime) for entries that don't.
+            val totalMinutes = list.sumOf { anime ->
+                val perEpisode = (anime.episodeDurationMinutes ?: 24).toLong()
+                perEpisode * anime.episodesWatched
             }
+            val rated = list.filter { it.rating > 0 }
+            val genreCounts = list
+                .flatMap { it.genres }
+                .groupingBy { it }
+                .eachCount()
+                .map { (genre, count) -> GenreCount(genre, count) }
+                .sortedByDescending { it.count }
+                .take(5)
+            ProfileStats(
+                totalAnime = list.size,
+                completed = list.count { it.status == AnimeStatus.COMPLETED },
+                watching = list.count { it.status == AnimeStatus.WATCHING },
+                planToWatch = list.count { it.status == AnimeStatus.PLAN_TO_WATCH },
+                favorites = list.count { it.isFavorite },
+                totalWatchMinutes = totalMinutes,
+                totalEpisodesWatched = list.sumOf { it.episodesWatched },
+                mangaCount = manga.size,
+                lightNovelCount = novels.size,
+                averageRating = if (rated.isEmpty()) 0.0 else rated.map { it.rating }.average(),
+                ratedCount = rated.size,
+                topGenres = genreCounts
+            )
+        }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
@@ -519,7 +554,8 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                     totalEpisodes = result.episodes ?: 0,
                     imageUrl = result.posterUrl,
                     aniListId = result.id,
-                    episodeDurationMinutes = result.duration
+                    episodeDurationMinutes = result.duration,
+                    genres = result.genres
                 )
             )
         }
@@ -799,7 +835,8 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                         status = status,
                         imageUrl = details.posterUrl,
                         aniListId = details.id,
-                        episodeDurationMinutes = details.duration
+                        episodeDurationMinutes = details.duration,
+                        genres = details.genres
                     )
                 )
             }
@@ -904,6 +941,30 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                 _profileBannerPath.value = savedPath
             }
             _isBannerSaving.value = false
+        }
+    }
+
+    /** Same idea as [setProfileBanner], but for the circular avatar photo. */
+    fun setProfileAvatar(uri: Uri) {
+        viewModelScope.launch {
+            _isAvatarSaving.value = true
+            val savedPath = withContext(Dispatchers.IO) {
+                try {
+                    val context = getApplication<Application>()
+                    val destFile = File(context.filesDir, "profile_avatar.jpg")
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        FileOutputStream(destFile).use { output -> input.copyTo(output) }
+                    }
+                    destFile.absolutePath
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            if (savedPath != null) {
+                profilePrefs.setAvatarPath(savedPath)
+                _profileAvatarPath.value = savedPath
+            }
+            _isAvatarSaving.value = false
         }
     }
 }
