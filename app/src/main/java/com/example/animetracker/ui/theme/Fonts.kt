@@ -17,3 +17,10 @@ private val pacifico = GoogleFont(name = "Pacifico")
 val VizoraLogoFont = FontFamily(
     Font(googleFont = pacifico, fontProvider = fontProvider)
 )
+
+private val inter = GoogleFont(name = "Inter")
+
+/** Clean modern sans used for the splash screen's "Loading..." label. */
+val InterFontFamily = FontFamily(
+    Font(googleFont = inter, fontProvider = fontProvider)
+)
