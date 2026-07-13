@@ -27,5 +27,6 @@ data class Anime(
     val imageUrl: String? = null,
     val aniListId: Int? = null,
     val isFavorite: Boolean = false,
-    val episodeDurationMinutes: Int? = null
+    val episodeDurationMinutes: Int? = null,
+    val genres: List<String> = emptyList()
 )
