@@ -1,394 +1,393 @@
 package com.example.animetracker.ui.screens
 
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.animetracker.ui.components.VizoraWordmark
-import com.example.animetracker.ui.theme.Blaze
-import com.example.animetracker.ui.theme.Bone
-import com.example.animetracker.ui.theme.Charcoal
-import com.example.animetracker.ui.theme.CharcoalHigh
-import com.example.animetracker.ui.theme.Pulse
-import com.example.animetracker.ui.theme.Smoke
-import com.example.animetracker.ui.theme.Void
+import com.example.animetracker.ui.theme.InterFontFamily
+import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.random.Random
 
+// Local palette for this screen only — deliberately cooler and more
+// restrained than the app's orange/pink brand colors so the glowing V
+// reads as the one accent on screen, not one of several.
+private val MidnightTop = Color(0xFF0B1020)
+private val MidnightBottom = Color(0xFF000000)
+private val GlowBlue = Color(0xFF5B8CFF)
+private val GlowPurple = Color(0xFF8A6CFF)
+private val InkRed = Color(0xFFB33A3A)
+private val SunRed = Color(0xFFD9333F)
+private val PetalPink = Color(0xFFF3B8CC)
+private val MistBlue = Color(0xFFC7D2FF)
+
 /**
- * Shown for the brief window between app launch and the initial home feed
- * load finishing. A night-sky scene — twinkling starfield, an occasional
- * shooting star, a pulsing gradient aura with orbiting particles behind the
- * wordmark, and an original ship silhouette rocking on animated waves.
- * Nothing here reproduces any existing show's design.
+ * A calm, cinematic splash inspired by traditional Japanese motifs: drifting
+ * sakura petals over a midnight gradient, a faint ensō-style brushstroke sun
+ * behind a glowing white "V," a hairline loading bar, and a soft shimmer
+ * that travels along the V's stroke every few seconds. Nothing here is a
+ * reproduction of any real flag, brand, or existing show's artwork.
  */
 @Composable
 fun SplashScreen() {
-    // A single looping clock drives the waves and the ship's bob/tilt.
-    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "splash")
-    val time by infiniteTransition.animateFloat(
+    val infiniteTransition = rememberInfiniteTransition(label = "splash")
+
+    // Petals falling top to bottom, one shared clock, staggered per-petal.
+    val fallTime by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue = (2 * Math.PI).toFloat(),
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4000, easing = LinearEasing),
+            animation = tween(durationMillis = 16000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "wave-phase"
+        label = "fall-time"
     )
-    val twinkle by infiniteTransition.animateFloat(
+    // Slow ambient drift for the mist particles.
+    val mistTime by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue = (2 * Math.PI).toFloat(),
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3200, easing = LinearEasing),
+            animation = tween(durationMillis = 9000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "twinkle"
+        label = "mist-time"
     )
-    val logoPulse by infiniteTransition.animateFloat(
-        initialValue = 0.94f,
-        targetValue = 1.1f,
+    // Gentle breathing scale on the aura behind the V.
+    val auraPulse by infiniteTransition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.08f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1500, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 2600, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "logo-pulse"
+        label = "aura-pulse"
     )
-    val ringRotation by infiniteTransition.animateFloat(
+    // Shimmer traveling along the V's stroke, looping every few seconds.
+    val shimmerProgress by infiniteTransition.animateFloat(
+        initialValue = -0.25f,
+        targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer"
+    )
+    // Thin loading line filling left to right, on a loop.
+    val lineFill by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue = 360f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 7000, easing = LinearEasing),
+            animation = tween(durationMillis = 1800, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "ring-rotation"
-    )
-    val shootingStar by infiniteTransition.animateFloat(
-        initialValue = -0.3f,
-        targetValue = 1.3f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 5400, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shooting-star"
+        label = "line-fill"
     )
 
-    // One-shot entrance animation for the logo (fades and grows in on launch).
-    val entrance = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        entrance.animateTo(1f, animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing))
+    val petals = remember {
+        List(16) {
+            Petal(
+                xFrac = Random.nextFloat(),
+                phase = Random.nextFloat(),
+                swayAmp = 0.03f + Random.nextFloat() * 0.05f,
+                swayFreq = 0.6f + Random.nextFloat() * 0.8f,
+                swayPhase = Random.nextFloat() * (2f * PI.toFloat()),
+                sizePx = 7f + Random.nextFloat() * 8f,
+                rotSpeed = 0.6f + Random.nextFloat() * 1.4f,
+                white = Random.nextFloat() < 0.3f
+            )
+        }
     }
-
-    val stars = remember {
-        List(55) {
-            Star(
-                x = Random.nextFloat(),
-                y = Random.nextFloat() * 0.6f,
-                radius = Random.nextFloat() * 2f + 0.6f,
-                phase = Random.nextFloat() * (2 * Math.PI).toFloat()
+    val mistParticles = remember {
+        List(14) {
+            MistParticle(
+                xFrac = Random.nextFloat(),
+                yFrac = 0.80f + Random.nextFloat() * 0.16f,
+                freq = 0.15f + Random.nextFloat() * 0.25f,
+                phase = Random.nextFloat() * (2f * PI.toFloat()),
+                driftAmp = 0.02f + Random.nextFloat() * 0.03f,
+                radius = 10f + Random.nextFloat() * 22f,
+                baseAlpha = 0.04f + Random.nextFloat() * 0.06f
             )
         }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = Void
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(colors = listOf(MidnightTop, MidnightBottom)))
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Deep vertical gradient backdrop, slightly lighter through the middle.
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Void, CharcoalHigh.copy(alpha = 0.55f), Void)
+        // Sun, brushstroke ring, petals, and mist all live on one scene canvas.
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val sunCenter = Offset(size.width * 0.5f, size.height * 0.45f)
+            val sunRadius = size.minDimension * 0.20f
+            drawCircle(color = SunRed.copy(alpha = 0.10f), radius = sunRadius, center = sunCenter)
+            drawBrushstrokeRing(sunCenter, sunRadius)
+            drawPetals(petals, fallTime)
+            drawMistParticles(mistParticles, mistTime)
+            drawMistBand()
+        }
+
+        // Cinematic vignette — darkens the edges slightly.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.32f)),
+                        radius = 1500f
+                    )
+                )
+        )
+
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                // Soft blue-purple aura, breathing gently behind the V.
+                Box(
+                    modifier = Modifier
+                        .size(200.dp)
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(
+                                    GlowPurple.copy(alpha = 0.22f * auraPulse),
+                                    GlowBlue.copy(alpha = 0.10f * auraPulse),
+                                    Color.Transparent
+                                )
+                            ),
+                            shape = CircleShape
                         )
-                    )
-            )
-
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                drawStars(stars, twinkle)
-                drawShootingStar(shootingStar)
-                drawMoon(logoPulse)
-                drawWaveLayer(
-                    phase = time,
-                    color = Blaze.copy(alpha = 0.10f),
-                    amplitude = 16f,
-                    heightFraction = 0.60f,
-                    speed = 0.7f
                 )
-                drawWaveLayer(
-                    phase = time,
-                    color = CharcoalHigh,
-                    amplitude = 14f,
-                    heightFraction = 0.62f,
-                    speed = 1f
-                )
-                drawWaveLayer(
-                    phase = time,
-                    color = Charcoal,
-                    amplitude = 10f,
-                    heightFraction = 0.7f,
-                    speed = 1.6f
-                )
-                drawShip(time)
-            }
-
-            // Pulsing gradient aura behind the wordmark.
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 40.dp)
-                    .size(220.dp)
-                    .scale(logoPulse)
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(
-                                Blaze.copy(alpha = 0.32f),
-                                Pulse.copy(alpha = 0.14f),
-                                Color.Transparent
-                            )
-                        ),
-                        shape = CircleShape
-                    )
-            )
-
-            // Orbiting particles circling the aura.
-            Canvas(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 40.dp)
-                    .size(220.dp)
-            ) {
-                rotate(degrees = ringRotation) {
-                    repeat(3) { i ->
-                        rotate(degrees = i * 120f) {
-                            drawCircle(
-                                color = Bone.copy(alpha = 0.85f),
-                                radius = 3.2f,
-                                center = Offset(size.width / 2f, size.height * 0.06f)
-                            )
-                        }
-                    }
+                Canvas(modifier = Modifier.size(128.dp)) {
+                    drawVLogo(shimmerProgress)
                 }
             }
 
-            // Wordmark + tagline, fading and growing in on launch.
-            Column(
+            Spacer(modifier = Modifier.height(30.dp))
+
+            // Hairline loading indicator.
+            Box(
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 72.dp)
-                    .alpha(entrance.value)
-                    .scale(0.85f + 0.15f * entrance.value),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .width(148.dp)
+                    .height(1.5.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.White.copy(alpha = 0.10f))
             ) {
-                VizoraWordmark(fontSize = 40.sp, markSize = 40.dp)
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "STREAM YOUR STORY",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Smoke,
-                    letterSpacing = 3.sp
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .width(148.dp * lineFill)
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.15f),
+                                    Color.White.copy(alpha = 0.95f)
+                                )
+                            )
+                        )
                 )
             }
 
-            // Animated gradient loading dots + status text.
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 56.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                LoadingDots(phase = time)
-                Spacer(modifier = Modifier.height(14.dp))
-                Text(
-                    text = "Loading your anime...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = "Loading...",
+                style = TextStyle(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Light,
+                    fontSize = 12.sp,
+                    letterSpacing = 2.sp
+                ),
+                color = Color.White.copy(alpha = 0.55f)
+            )
         }
     }
 }
 
-private data class Star(val x: Float, val y: Float, val radius: Float, val phase: Float)
+private data class Petal(
+    val xFrac: Float,
+    val phase: Float,
+    val swayAmp: Float,
+    val swayFreq: Float,
+    val swayPhase: Float,
+    val sizePx: Float,
+    val rotSpeed: Float,
+    val white: Boolean
+)
 
-/** Scattered twinkling stars, each fading in and out on its own phase offset. */
-private fun DrawScope.drawStars(stars: List<Star>, twinklePhase: Float) {
-    stars.forEach { star ->
-        val alpha = (0.3f + 0.7f * ((sin(twinklePhase + star.phase) + 1f) / 2f)).coerceIn(0f, 1f)
-        drawCircle(
-            color = Bone.copy(alpha = alpha),
-            radius = star.radius,
-            center = Offset(star.x * size.width, star.y * size.height)
+private data class MistParticle(
+    val xFrac: Float,
+    val yFrac: Float,
+    val freq: Float,
+    val phase: Float,
+    val driftAmp: Float,
+    val radius: Float,
+    val baseAlpha: Float
+)
+
+/** A delicate, hand-painted-looking ring behind the sun — an ensō, not a perfect circle. */
+private fun DrawScope.drawBrushstrokeRing(center: Offset, baseRadius: Float) {
+    val strokes = listOf(
+        Triple(-8f, 328f, 0.10f) to (baseRadius * 1.02f to 3.5f),
+        Triple(14f, 300f, 0.18f) to (baseRadius * 0.98f to 6f),
+        Triple(4f, 316f, 0.14f) to (baseRadius * 1.06f to 2.5f)
+    )
+    strokes.forEach { (angleData, radiusData) ->
+        val (startAngle, sweep, alpha) = angleData
+        val (radius, strokeWidth) = radiusData
+        drawArc(
+            color = InkRed.copy(alpha = alpha),
+            startAngle = startAngle,
+            sweepAngle = sweep,
+            useCenter = false,
+            topLeft = Offset(center.x - radius, center.y - radius),
+            size = Size(radius * 2, radius * 2),
+            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
         )
     }
 }
 
-/** A short fading streak that sweeps across the upper sky on a loop. */
-private fun DrawScope.drawShootingStar(progress: Float) {
-    if (progress < 0f || progress > 1f) return
-    val startX = size.width * 1.1f
-    val startY = size.height * 0.08f
-    val endX = size.width * -0.1f
-    val endY = size.height * 0.40f
-    val headX = startX + (endX - startX) * progress
-    val headY = startY + (endY - startY) * progress
-    val trail = 0.14f
-    val tailProgress = (progress - trail).coerceAtLeast(0f)
-    val tailX = startX + (endX - startX) * tailProgress
-    val tailY = startY + (endY - startY) * tailProgress
-    val edgeFade = (1f - progress).coerceIn(0f, 1f).coerceAtMost((progress / trail).coerceIn(0f, 1f))
+/** Slow-falling sakura petals, drifting side to side, fading in and out at the edges. */
+private fun DrawScope.drawPetals(petals: List<Petal>, t: Float) {
+    petals.forEach { p ->
+        val progress = (t + p.phase) % 1f
+        val y = -0.06f * size.height + progress * 1.18f * size.height
+        val x = p.xFrac * size.width +
+            sin(progress * 2f * PI.toFloat() * p.swayFreq + p.swayPhase) * p.swayAmp * size.width
+        val fadeIn = (progress / 0.08f).coerceIn(0f, 1f)
+        val fadeOut = ((1f - progress) / 0.15f).coerceIn(0f, 1f)
+        val alpha = fadeIn * fadeOut * 0.7f
+        if (alpha <= 0.01f) return@forEach
 
-    drawLine(
-        brush = Brush.linearGradient(
-            colors = listOf(Bone.copy(alpha = edgeFade), Color.Transparent),
-            start = Offset(headX, headY),
-            end = Offset(tailX, tailY)
-        ),
-        start = Offset(headX, headY),
-        end = Offset(tailX, tailY),
-        strokeWidth = 2.5f,
-        cap = StrokeCap.Round
-    )
-}
-
-/** A glowing Pulse-tinted moon, its halo breathing with the logo pulse. */
-private fun DrawScope.drawMoon(glowScale: Float) {
-    val center = Offset(size.width * 0.74f, size.height * 0.22f)
-    val baseRadius = size.minDimension * 0.11f
-    drawCircle(color = Pulse.copy(alpha = 0.12f), radius = baseRadius * 1.8f * glowScale, center = center)
-    drawCircle(color = Pulse.copy(alpha = 0.22f), radius = baseRadius * 1.25f, center = center)
-    drawCircle(color = Pulse.copy(alpha = 0.4f), radius = baseRadius, center = center)
-}
-
-/**
- * One layer of a repeating sine-wave "water" band. Multiple layers at
- * different speeds/amplitudes/colors give a simple parallax feel.
- */
-private fun DrawScope.drawWaveLayer(
-    phase: Float,
-    color: Color,
-    amplitude: Float,
-    heightFraction: Float,
-    speed: Float
-) {
-    val baseline = size.height * heightFraction
-    val path = Path().apply {
-        moveTo(0f, size.height)
-        lineTo(0f, baseline)
-        val step = 8f
-        var x = 0f
-        while (x <= size.width) {
-            val y = baseline + amplitude * sin((x / 60f) + phase * speed)
-            lineTo(x, y)
-            x += step
+        val color = if (p.white) Color.White.copy(alpha = alpha * 0.75f) else PetalPink.copy(alpha = alpha)
+        val rotation = progress * 360f * p.rotSpeed
+        rotate(degrees = rotation, pivot = Offset(x, y)) {
+            val petalPath = Path().apply {
+                moveTo(x, y - p.sizePx)
+                cubicTo(x + p.sizePx * 0.6f, y - p.sizePx * 0.6f, x + p.sizePx * 0.6f, y + p.sizePx * 0.6f, x, y + p.sizePx)
+                cubicTo(x - p.sizePx * 0.6f, y + p.sizePx * 0.6f, x - p.sizePx * 0.6f, y - p.sizePx * 0.6f, x, y - p.sizePx)
+                close()
+            }
+            drawPath(petalPath, color = color)
         }
-        lineTo(size.width, size.height)
-        close()
     }
-    drawPath(path, color = color)
+}
+
+/** Faint drifting motes within the mist band near the bottom. */
+private fun DrawScope.drawMistParticles(particles: List<MistParticle>, t: Float) {
+    particles.forEach { m ->
+        val drift = sin(t * 2f * PI.toFloat() * m.freq + m.phase) * m.driftAmp * size.width
+        val twinkle = 0.6f + 0.4f * ((sin(t * 2f * PI.toFloat() + m.phase) + 1f) / 2f)
+        drawCircle(
+            color = MistBlue.copy(alpha = m.baseAlpha * twinkle),
+            radius = m.radius,
+            center = Offset(m.xFrac * size.width + drift, m.yFrac * size.height)
+        )
+    }
+}
+
+/** A soft, layered fog band hugging the bottom edge of the screen. */
+private fun DrawScope.drawMistBand() {
+    val bandTop = size.height * 0.80f
+    drawRect(
+        brush = Brush.verticalGradient(
+            colors = listOf(Color.Transparent, MistBlue.copy(alpha = 0.07f)),
+            startY = bandTop,
+            endY = size.height
+        ),
+        topLeft = Offset(0f, bandTop),
+        size = Size(size.width, size.height - bandTop)
+    )
 }
 
 /**
- * A minimal original ship silhouette: hull, mast, single sail, riding the
- * front wave layer. Bobs vertically and tilts slightly with the same clock
- * driving the waves so it reads as "sitting in the water" rather than
- * floating independently of it.
+ * The stylized "V" mark: a layered blue-purple glow beneath a crisp white
+ * chevron, with a bright highlight traveling along the stroke's length —
+ * driven by [PathMeasure] so the shimmer follows the actual glyph shape
+ * rather than a rectangular mask.
  */
-private fun DrawScope.drawShip(phase: Float) {
-    val baseline = size.height * 0.62f
-    val bob = 6f * sin(phase * 1f)
-    val centerX = size.width * 0.5f
-    val shipY = baseline + bob - 18f
+private fun DrawScope.drawVLogo(shimmerProgress: Float) {
+    val w = size.width
+    val h = size.height
+    val vPath = Path().apply {
+        moveTo(w * 0.16f, h * 0.14f)
+        lineTo(w * 0.5f, h * 0.88f)
+        lineTo(w * 0.84f, h * 0.14f)
+    }
 
-    val hullWidth = size.width * 0.28f
-    val hullHeight = 22f
+    // Outer glow layers, largest/faintest first.
+    listOf(
+        (w * 0.40f) to GlowPurple.copy(alpha = 0.10f),
+        (w * 0.28f) to GlowBlue.copy(alpha = 0.18f),
+        (w * 0.20f) to GlowBlue.copy(alpha = 0.28f)
+    ).forEach { (strokeWidth, color) ->
+        drawPath(
+            vPath,
+            color = color,
+            style = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+    }
 
-    // Soft light pooling under the sail.
-    drawCircle(
-        color = Blaze.copy(alpha = 0.08f),
-        radius = hullWidth * 0.9f,
-        center = Offset(centerX, shipY - 20f)
+    val coreStrokeWidth = w * 0.115f
+    drawPath(
+        vPath,
+        color = Color.White,
+        style = Stroke(width = coreStrokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
     )
 
-    // Hull: a simple rounded trapezoid.
-    val hull = Path().apply {
-        moveTo(centerX - hullWidth / 2, shipY)
-        lineTo(centerX + hullWidth / 2, shipY)
-        lineTo(centerX + hullWidth / 2 - 14f, shipY + hullHeight)
-        lineTo(centerX - hullWidth / 2 + 14f, shipY + hullHeight)
-        close()
-    }
-    drawPath(hull, color = Smoke)
-
-    // Mast.
-    drawLine(
-        color = Bone,
-        start = Offset(centerX, shipY),
-        end = Offset(centerX, shipY - 60f),
-        strokeWidth = 4f
-    )
-
-    // Sail: a single triangle, tilting gently with the same phase as the bob.
-    val tilt = 6f * sin(phase * 1f + 1.2f)
-    val sail = Path().apply {
-        moveTo(centerX, shipY - 58f)
-        lineTo(centerX + 34f + tilt, shipY - 30f)
-        lineTo(centerX, shipY - 6f)
-        close()
-    }
-    drawPath(sail, color = Bone.copy(alpha = 0.9f))
-}
-
-/** Three gradient dots pulsing out of sync, standing in for a loading spinner. */
-@Composable
-private fun LoadingDots(phase: Float) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        repeat(3) { i ->
-            val dotScale = 0.55f + 0.45f * ((sin(phase * 2f + i * 1.4f) + 1f) / 2f)
-            Box(
-                modifier = Modifier
-                    .size(9.dp)
-                    .scale(dotScale)
-                    .background(
-                        Brush.linearGradient(listOf(Blaze, Pulse)),
-                        shape = CircleShape
-                    )
+    // Shimmer: a short bright segment sliding along the V's own path.
+    val pathMeasure = PathMeasure()
+    pathMeasure.setPath(vPath, false)
+    val length = pathMeasure.length
+    if (length > 0f) {
+        val segmentLength = length * 0.22f
+        val start = shimmerProgress * (length + segmentLength) - segmentLength
+        val clampedStart = start.coerceIn(0f, length)
+        val clampedEnd = (start + segmentLength).coerceIn(0f, length)
+        if (clampedEnd > clampedStart) {
+            val segment = Path()
+            pathMeasure.getSegment(clampedStart, clampedEnd, segment, true)
+            drawPath(
+                segment,
+                color = Color.White.copy(alpha = 0.95f),
+                style = Stroke(width = coreStrokeWidth * 1.1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
             )
         }
     }
