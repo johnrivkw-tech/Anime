@@ -10,7 +10,7 @@ import retrofit2.http.Query
 interface GeminiApiService {
 
     @Headers("Content-Type: application/json")
-    @POST("models/gemini-2.5-flash:generateContent")
+    @POST("models/gemini-2.0-flash:generateContent")
     suspend fun generateContent(
         @Query("key") apiKey: String,
         @Body request: GeminiRequest
