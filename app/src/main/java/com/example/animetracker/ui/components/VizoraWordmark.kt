@@ -1,4 +1,5 @@
 package com.example.animetracker.ui.components
+import androidx.compose.material3.MaterialTheme
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Row
@@ -21,9 +22,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.animetracker.ui.theme.Blaze
-import com.example.animetracker.ui.theme.Pulse
-import com.example.animetracker.ui.theme.Void
 
 /**
  * Vizora's wordmark: a small angular diamond-and-chevron mark next to
@@ -54,7 +52,7 @@ fun VizoraWordmark(
             drawPath(
                 path = diamond,
                 brush = Brush.linearGradient(
-                    colors = listOf(Blaze, Pulse),
+                    colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary),
                     start = Offset(0f, 0f),
                     end = Offset(w, h)
                 )
@@ -68,7 +66,7 @@ fun VizoraWordmark(
             }
             drawPath(
                 path = chevron,
-                color = Void,
+                color = MaterialTheme.colorScheme.background,
                 style = Stroke(width = w * 0.12f, cap = StrokeCap.Round, join = StrokeJoin.Round)
             )
         }
@@ -78,7 +76,7 @@ fun VizoraWordmark(
         Text(
             text = "VIZORA",
             style = TextStyle(
-                brush = Brush.linearGradient(listOf(Blaze, Pulse)),
+                brush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)),
                 fontWeight = FontWeight.Black,
                 fontSize = fontSize,
                 letterSpacing = (fontSize.value * 0.05f).sp
