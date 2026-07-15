@@ -71,14 +71,9 @@ import com.example.animetracker.data.network.AniListCharacterEdge
 import com.example.animetracker.data.network.AniListMedia
 import com.example.animetracker.data.network.AniListTrailer
 import com.example.animetracker.ui.components.TrailerPlayerDialog
-import com.example.animetracker.ui.theme.Blaze
 import com.example.animetracker.ui.theme.Bone
-import com.example.animetracker.ui.theme.Charcoal
-import com.example.animetracker.ui.theme.CharcoalHigh
 import com.example.animetracker.ui.theme.ErrorRed
-import com.example.animetracker.ui.theme.Pulse
 import com.example.animetracker.ui.theme.Smoke
-import com.example.animetracker.ui.theme.Void
 import com.example.animetracker.viewmodel.AnimeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,7 +99,7 @@ fun AnimeDetailsScreen(
     }
 
     Scaffold(
-        containerColor = Void,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text(details?.displayTitle ?: "", color = Bone) },
@@ -119,7 +114,7 @@ fun AnimeDetailsScreen(
                             Icon(
                                 imageVector = if (localEntry.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                                 contentDescription = "Favorite",
-                                tint = if (localEntry.isFavorite) Pulse else Smoke
+                                tint = if (localEntry.isFavorite) MaterialTheme.colorScheme.secondary else Smoke
                             )
                         }
                     }
@@ -138,7 +133,7 @@ fun AnimeDetailsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Void,
+                    containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = Bone
                 )
             )
@@ -150,7 +145,7 @@ fun AnimeDetailsScreen(
                     modifier = Modifier.fillMaxSize().padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = Blaze)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             }
             error != null && details == null -> {
@@ -164,7 +159,7 @@ fun AnimeDetailsScreen(
                     Button(
                         onClick = { viewModel.loadAnimeDetails(aniListId) },
                         shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Blaze, contentColor = Bone)
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Bone)
                     ) {
                         Text("Retry")
                     }
@@ -230,7 +225,7 @@ private fun DetailsContent(
                         Icon(
                             imageVector = Icons.Filled.Star,
                             contentDescription = null,
-                            tint = Pulse,
+                            tint = MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
@@ -278,7 +273,7 @@ private fun DetailsContent(
                         details.genres.forEach { genreName ->
                             Surface(
                                 shape = RoundedCornerShape(50),
-                                color = CharcoalHigh
+                                color = MaterialTheme.colorScheme.surfaceVariant
                             ) {
                                 Text(
                                     text = genreName,
@@ -298,7 +293,7 @@ private fun DetailsContent(
                         onClick = { onWatchTrailer(trailer) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Blaze, contentColor = Bone)
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Bone)
                     ) {
                         Icon(Icons.Filled.PlayArrow, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -374,7 +369,7 @@ private fun HeroSection(details: AniListMedia) {
                 .height(220.dp)
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Void)
+                        colors = listOf(Color.Transparent, MaterialTheme.colorScheme.background)
                     )
                 )
         )
@@ -417,9 +412,9 @@ private fun StatusActionSection(
                     label = { Text(status.label) },
                     shape = RoundedCornerShape(50),
                     colors = FilterChipDefaults.filterChipColors(
-                        containerColor = CharcoalHigh,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
                         labelColor = Smoke,
-                        selectedContainerColor = Blaze,
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
                         selectedLabelColor = Bone
                     )
                 )
@@ -454,7 +449,7 @@ private fun TrackingSection(
                 Icon(
                     imageVector = if (i <= entry.rating) Icons.Filled.Star else Icons.Outlined.Star,
                     contentDescription = "Rate $i",
-                    tint = Pulse,
+                    tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier
                         .size(22.dp)
                         .clickable { onRate(entry, i) }
@@ -473,7 +468,7 @@ private fun TrackingSection(
         Button(
             onClick = { onMarkEpisodeWatched(entry) },
             shape = RoundedCornerShape(10.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Blaze, contentColor = Bone)
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Bone)
         ) {
             Text("Mark Episode Watched", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
         }
