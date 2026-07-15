@@ -1,6 +1,7 @@
 package com.example.animetracker.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,7 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -54,12 +55,13 @@ fun FeaturedBanner(
     onClick: (HomeCardItem) -> Unit,
     onAiClick: () -> Unit,
     onReadingClick: () -> Unit,
-    onSearchClick: () -> Unit,
+    onProfileClick: () -> Unit,
+    profileAvatarPath: String? = null,
     modifier: Modifier = Modifier
 ) {
-    // 50% of screen height hero banner, leaving more of the page
+    // 75% of screen height hero banner, leaving the rest of the page
     // visible below to hint that there's more to scroll to.
-    val bannerHeight = (LocalConfiguration.current.screenHeightDp * 0.5f).dp
+    val bannerHeight = (LocalConfiguration.current.screenHeightDp * 0.75f).dp
 
     if (items.isEmpty()) {
         Box(
@@ -171,7 +173,7 @@ fun FeaturedBanner(
             }
         }
 
-        // Top bar (wordmark, menu, search) stays fixed above the pager.
+        // Top bar (wordmark, menu, profile) stays fixed above the pager.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -220,18 +222,35 @@ fun FeaturedBanner(
                         )
                     }
                 }
-                IconButton(
-                    onClick = onSearchClick,
+                // Profile entry point — shows whichever avatar the user has
+                // chosen, falling back to a plain person glyph until one is
+                // set. Tapping it opens the profile screen.
+                Box(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
                         .background(Color.Black.copy(alpha = 0.35f))
+                        .border(1.dp, Bone.copy(alpha = 0.5f), CircleShape)
+                        .clickable(onClick = onProfileClick),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = "Search",
-                        tint = Bone
-                    )
+                    if (profileAvatarPath != null) {
+                        AsyncImage(
+                            model = profileAvatarPath,
+                            contentDescription = "Profile",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.Person,
+                            contentDescription = "Profile",
+                            tint = Bone,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
             }
         }
