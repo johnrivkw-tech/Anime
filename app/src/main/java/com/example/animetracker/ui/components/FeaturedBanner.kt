@@ -57,9 +57,9 @@ fun FeaturedBanner(
     onSearchClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // 75% of screen height hero banner, leaving the rest of the page
+    // 50% of screen height hero banner, leaving more of the page
     // visible below to hint that there's more to scroll to.
-    val bannerHeight = (LocalConfiguration.current.screenHeightDp * 0.75f).dp
+    val bannerHeight = (LocalConfiguration.current.screenHeightDp * 0.5f).dp
 
     if (items.isEmpty()) {
         Box(
