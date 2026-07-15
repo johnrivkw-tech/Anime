@@ -69,6 +69,7 @@ import com.example.animetracker.data.Anime
 import com.example.animetracker.data.AnimeStatus
 import com.example.animetracker.data.network.AniListCharacterEdge
 import com.example.animetracker.data.network.AniListMedia
+import com.example.animetracker.data.network.AniListRelationEdge
 import com.example.animetracker.data.network.AniListTrailer
 import com.example.animetracker.ui.components.TrailerPlayerDialog
 import com.example.animetracker.ui.theme.Bone
@@ -81,7 +82,8 @@ import com.example.animetracker.viewmodel.AnimeViewModel
 fun AnimeDetailsScreen(
     viewModel: AnimeViewModel,
     aniListId: Int,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onAnimeClick: (Int) -> Unit = {}
 ) {
     val details by viewModel.animeDetails.collectAsState()
     val isLoading by viewModel.isDetailsLoading.collectAsState()
@@ -175,6 +177,7 @@ fun AnimeDetailsScreen(
                     onRemove = { entry -> viewModel.deleteAnime(entry) },
                     onRate = { entry, rating -> viewModel.rateAnime(entry, rating) },
                     onMarkEpisodeWatched = { entry -> viewModel.incrementEpisode(entry) },
+                    onSelectRelated = onAnimeClick,
                     onWatchTrailer = { trailer ->
                         if (trailer.site.equals("youtube", ignoreCase = true) && trailer.id != null) {
                             youtubeTrailerId = trailer.id
@@ -204,6 +207,7 @@ private fun DetailsContent(
     onRemove: (Anime) -> Unit,
     onRate: (Anime, Int) -> Unit,
     onMarkEpisodeWatched: (Anime) -> Unit,
+    onSelectRelated: (Int) -> Unit,
     onWatchTrailer: (AniListTrailer) -> Unit
 ) {
     val scroll = rememberScrollState()
@@ -309,7 +313,30 @@ private fun DetailsContent(
                     style = MaterialTheme.typography.bodyMedium,
                     color = Smoke
                 )
-
+            }
+        }
+        if (details.seasonsAndArcs.isNotEmpty()) {
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "Seasons & Arcs",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Bone,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(details.seasonsAndArcs, key = { it.node.id }) { edge ->
+                        RelatedSeasonCard(edge = edge, onClick = { onSelectRelated(edge.node.id) })
+                    }
+                }
+            }
+        }
+        item {
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(text = "Your List", style = MaterialTheme.typography.titleMedium, color = Bone)
                 Spacer(modifier = Modifier.height(10.dp))
@@ -471,6 +498,53 @@ private fun TrackingSection(
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Bone)
         ) {
             Text("Mark Episode Watched", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun RelatedSeasonCard(edge: AniListRelationEdge, onClick: () -> Unit) {
+    val node = edge.node
+    Column(
+        modifier = Modifier
+            .width(120.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier.fillMaxWidth().height(160.dp)
+        ) {
+            AsyncImage(
+                model = node.posterUrl,
+                contentDescription = node.displayTitle,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = edge.relationLabel,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.secondary,
+            maxLines = 1
+        )
+        Text(
+            text = node.displayTitle,
+            style = MaterialTheme.typography.labelMedium,
+            color = Bone,
+            maxLines = 2
+        )
+        val meta = listOfNotNull(
+            node.seasonYear?.toString(),
+            node.episodes?.let { "$it ep" }
+        ).joinToString(" • ")
+        if (meta.isNotBlank()) {
+            Text(
+                text = meta,
+                style = MaterialTheme.typography.labelSmall,
+                color = Smoke,
+                maxLines = 1
+            )
         }
     }
 }
