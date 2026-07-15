@@ -70,7 +70,6 @@ import com.example.animetracker.ui.model.GenreCount
 import com.example.animetracker.ui.model.ProfileBadge
 import com.example.animetracker.ui.model.ProfileStats
 import com.example.animetracker.ui.theme.Bone
-import com.example.animetracker.ui.theme.Pulse
 import com.example.animetracker.ui.theme.Smoke
 import com.example.animetracker.viewmodel.AnimeViewModel
 import java.io.File
@@ -390,7 +389,7 @@ private fun OverviewCard(stats: ProfileStats, modifier: Modifier = Modifier) {
                         Icon(
                             Icons.Filled.Star,
                             contentDescription = null,
-                            tint = Pulse,
+                            tint = MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
