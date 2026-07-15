@@ -32,11 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.animetracker.ui.theme.Bone
-import com.example.animetracker.ui.theme.CharcoalHigh
 import com.example.animetracker.ui.theme.ErrorRed
-import com.example.animetracker.ui.theme.Blaze
 import com.example.animetracker.ui.theme.Smoke
-import com.example.animetracker.ui.theme.Void
 import com.example.animetracker.viewmodel.AnimeViewModel
 
 /**
@@ -58,7 +55,7 @@ fun MangaChaptersScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Void)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Row(
             modifier = Modifier
@@ -82,7 +79,7 @@ fun MangaChaptersScreen(
 
         when {
             isLoading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Blaze)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
             error != null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(text = error ?: "", color = ErrorRed, modifier = Modifier.padding(24.dp))
@@ -111,7 +108,7 @@ fun MangaChaptersScreen(
                                 viewModel.loadChapterPages(chapter.id)
                                 onChapterClick()
                             },
-                        color = CharcoalHigh,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
