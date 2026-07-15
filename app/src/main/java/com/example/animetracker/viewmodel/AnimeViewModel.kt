@@ -17,6 +17,8 @@ import com.example.animetracker.data.LightNovelRepository
 import com.example.animetracker.data.MangaEntity
 import com.example.animetracker.data.MangaRepository
 import com.example.animetracker.data.ProfilePrefs
+import com.example.animetracker.data.ThemePrefs
+import com.example.animetracker.ui.theme.AppThemeOption
 import com.example.animetracker.data.network.AniListAiringSchedule
 import com.example.animetracker.data.network.AniListCharacterEdge
 import com.example.animetracker.data.network.AniListMedia
@@ -61,7 +63,11 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val geminiRepository = GeminiRepository()
     private val geminiChatRepository = GeminiChatRepository()
     private val profilePrefs = ProfilePrefs(application)
+    private val themePrefs = ThemePrefs(application)
     private val lightNovelFolderPrefs = LightNovelFolderPrefs(application)
+
+    private val _themeOption = MutableStateFlow(themePrefs.getTheme())
+    val themeOption: StateFlow<AppThemeOption> = _themeOption.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -391,6 +397,11 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         loadAiRecommendations()
         loadSchedule()
         scanLinkedFolder()
+    }
+
+    fun setTheme(theme: AppThemeOption) {
+        themePrefs.setTheme(theme)
+        _themeOption.value = theme
     }
 
     fun onSearchQueryChange(query: String) {
