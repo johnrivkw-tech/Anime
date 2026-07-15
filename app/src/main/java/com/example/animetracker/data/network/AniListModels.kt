@@ -74,7 +74,8 @@ data class AniListMedia(
     val bannerImage: String?,
     val genres: List<String> = emptyList(),
     val studios: AniListStudioConnection? = null,
-    val trailer: AniListTrailer? = null
+    val trailer: AniListTrailer? = null,
+    val relations: AniListRelationConnection? = null
 ) {
     /** Prefers the English localized title, falling back through romaji to native script. */
     val displayTitle: String
@@ -106,6 +107,15 @@ data class AniListMedia(
     /** Animation studio(s) only — the query excludes production/licensing companies. */
     val studioNames: List<String>
         get() = studios?.nodes.orEmpty().map { it.name }
+
+    /**
+     * Other anime entries (seasons, sequels, side stories, etc.) related to
+     * this one, for the Details screen's "Seasons & Arcs" row. Manga/novel
+     * source-material relations are dropped since there's nowhere in the
+     * app to open them.
+     */
+    val seasonsAndArcs: List<AniListRelationEdge>
+        get() = relations?.edges.orEmpty().filter { it.node.type == "ANIME" }
 }
 
 data class AniListTitle(
@@ -139,6 +149,41 @@ data class AniListTrailer(
             "dailymotion" -> id?.let { "https://www.dailymotion.com/video/$it" }
             else -> null
         }
+}
+
+// --- Relations (seasons, sequels, side stories, etc.) ---------------------
+
+data class AniListRelationConnection(
+    val edges: List<AniListRelationEdge> = emptyList()
+)
+
+data class AniListRelationEdge(
+    val relationType: String?,
+    val node: AniListRelationNode
+) {
+    /** e.g. "PREQUEL" -> "Prequel", "SIDE_STORY" -> "Side story". */
+    val relationLabel: String
+        get() = relationType
+            ?.lowercase()
+            ?.replace("_", " ")
+            ?.replaceFirstChar { it.uppercase() }
+            ?: "Related"
+}
+
+data class AniListRelationNode(
+    val id: Int,
+    val type: String?,
+    val format: String?,
+    val title: AniListTitle,
+    val coverImage: AniListCoverImage?,
+    val episodes: Int?,
+    val seasonYear: Int?
+) {
+    val displayTitle: String
+        get() = title.english ?: title.romaji ?: title.native ?: "Untitled"
+
+    val posterUrl: String?
+        get() = coverImage?.extraLarge ?: coverImage?.large
 }
 
 private fun String.cleanAniListDescription(): String = this
