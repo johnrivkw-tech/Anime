@@ -57,22 +57,19 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.animetracker.data.Anime
 import com.example.animetracker.data.AnimeStatus
-import com.example.animetracker.ui.theme.Blaze
 import com.example.animetracker.ui.theme.Bone
-import com.example.animetracker.ui.theme.Charcoal
-import com.example.animetracker.ui.theme.CharcoalHigh
-import com.example.animetracker.ui.theme.Pulse
 import com.example.animetracker.ui.theme.Smoke
-import com.example.animetracker.ui.theme.Void
 
 // Per-status accent color, shared by the card's stripe/badge and the
-// filter chips / stat tiles on the My List screen.
-val StatusWatching = Blaze
+// filter chips / stat tiles on the My List screen. WATCHING follows the
+// selected theme's accent; the other two stay fixed so status is still
+// visually distinguishable regardless of theme.
 val StatusCompleted = Color(0xFF35D28A)
 val StatusPlanToWatch = Color(0xFF6C8CFF)
 
+@Composable
 fun statusColor(status: AnimeStatus): Color = when (status) {
-    AnimeStatus.WATCHING -> StatusWatching
+    AnimeStatus.WATCHING -> MaterialTheme.colorScheme.primary
     AnimeStatus.COMPLETED -> StatusCompleted
     AnimeStatus.PLAN_TO_WATCH -> StatusPlanToWatch
 }
@@ -105,7 +102,7 @@ fun AnimeCard(
                 spotColor = Color.Black.copy(alpha = 0.5f)
             )
             .clip(RoundedCornerShape(18.dp)),
-        color = Charcoal
+        color = MaterialTheme.colorScheme.surface
     ) {
         Row(
             modifier = Modifier
@@ -137,7 +134,7 @@ fun AnimeCard(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .clip(RoundedCornerShape(14.dp))
-                                .background(CharcoalHigh),
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -156,12 +153,12 @@ fun AnimeCard(
                             .padding(2.dp)
                             .size(26.dp)
                             .clip(RoundedCornerShape(50))
-                            .background(Void.copy(alpha = 0.55f))
+                            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.55f))
                     ) {
                         Icon(
                             imageVector = if (anime.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                             contentDescription = if (anime.isFavorite) "Unfavorite" else "Favorite",
-                            tint = if (anime.isFavorite) Pulse else Bone,
+                            tint = if (anime.isFavorite) MaterialTheme.colorScheme.secondary else Bone,
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -172,14 +169,14 @@ fun AnimeCard(
                                 .align(Alignment.BottomStart)
                                 .padding(4.dp)
                                 .clip(RoundedCornerShape(50))
-                                .background(Void.copy(alpha = 0.7f))
+                                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.7f))
                                 .padding(horizontal = 6.dp, vertical = 3.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Star,
                                 contentDescription = null,
-                                tint = Pulse,
+                                tint = MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.size(11.dp)
                             )
                             Spacer(modifier = Modifier.width(2.dp))
@@ -236,7 +233,7 @@ fun AnimeCard(
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Delete") },
-                                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Pulse) },
+                                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
                                     onClick = {
                                         menuExpanded = false
                                         showDeleteConfirm = true
@@ -292,14 +289,14 @@ fun AnimeCard(
                                 .fillMaxWidth()
                                 .height(7.dp)
                                 .clip(RoundedCornerShape(50))
-                                .background(CharcoalHigh)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
                         ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxHeight()
                                     .fillMaxWidth(fraction = progress)
                                     .clip(RoundedCornerShape(50))
-                                    .background(Brush.horizontalGradient(listOf(Blaze, Pulse)))
+                                    .background(Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)))
                             )
                         }
                     }
@@ -314,7 +311,7 @@ fun AnimeCard(
                             onClick = onIncrement,
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Blaze,
+                                containerColor = MaterialTheme.colorScheme.primary,
                                 contentColor = Bone
                             )
                         ) {
@@ -335,7 +332,7 @@ fun AnimeCard(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            containerColor = Charcoal,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = { Text("Remove anime?", color = Bone) },
             text = { Text("Remove \"${anime.name}\" from your watchlist? This can't be undone.", color = Smoke) },
             confirmButton = {
@@ -343,7 +340,7 @@ fun AnimeCard(
                     onDelete()
                     showDeleteConfirm = false
                 }) {
-                    Text("Remove", color = Pulse, fontWeight = FontWeight.Bold)
+                    Text("Remove", color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
