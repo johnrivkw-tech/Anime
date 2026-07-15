@@ -32,8 +32,9 @@ fun HomeFeedScreen(
     onAnimeClick: (Int) -> Unit,
     onChatClick: () -> Unit,
     onReadingClick: () -> Unit,
-    onSearchClick: () -> Unit
+    onProfileClick: () -> Unit
 ) {
+    val profileAvatarPath by viewModel.profileAvatarPath.collectAsState()
     val trending by viewModel.trending.collectAsState()
     val popularSeason by viewModel.popularThisSeason.collectAsState()
     val topRated by viewModel.topRated.collectAsState()
@@ -99,7 +100,8 @@ fun HomeFeedScreen(
                         onClick = { item -> item.aniListId?.let(onAnimeClick) },
                         onAiClick = onChatClick,
                         onReadingClick = onReadingClick,
-                        onSearchClick = onSearchClick
+                        onProfileClick = onProfileClick,
+                        profileAvatarPath = profileAvatarPath
                     )
                     Spacer(modifier = Modifier.height(20.dp))
                 }
@@ -112,6 +114,14 @@ fun HomeFeedScreen(
                             onItemClick = { it.aniListId?.let(onAnimeClick) }
                         )
                     }
+                }
+                item {
+                    AnimeSectionRow(
+                        title = "Trending Now",
+                        items = trendingItems,
+                        isLoading = isLoading && trendingItems.isEmpty(),
+                        onItemClick = { it.aniListId?.let(onAnimeClick) }
+                    )
                 }
                 item {
                     AnimeSectionRow(
@@ -153,14 +163,6 @@ fun HomeFeedScreen(
                         onItemClick = { it.aniListId?.let(onAnimeClick) },
                         emptyMessage = aiRecsError
                             ?: "Track a few anime to unlock AI picks based on your taste"
-                    )
-                }
-                item {
-                    AnimeSectionRow(
-                        title = "Trending Now",
-                        items = trendingItems,
-                        isLoading = isLoading && trendingItems.isEmpty(),
-                        onItemClick = { it.aniListId?.let(onAnimeClick) }
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
