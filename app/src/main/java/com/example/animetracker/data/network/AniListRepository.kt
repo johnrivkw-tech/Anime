@@ -46,10 +46,32 @@ private val SEARCH_QUERY = """
     }
 """.trimIndent()
 
+// Extra fields fetched only for the Details screen — a "Seasons & Arcs"
+// row of related anime (prequels, sequels, side stories, etc.), keyed off
+// AniList's relationType(version: 2), which gives the cleaner/newer set of
+// relation labels rather than the legacy ones.
+private const val RELATIONS_FIELDS = """
+    relations {
+      edges {
+        relationType(version: 2)
+        node {
+          id
+          type
+          format
+          title { romaji english native }
+          coverImage { extraLarge large }
+          episodes
+          seasonYear
+        }
+      }
+    }
+"""
+
 private val DETAILS_QUERY = """
     query(${'$'}id: Int) {
       Media(id: ${'$'}id, type: ANIME) {
         $MEDIA_FIELDS
+        $RELATIONS_FIELDS
       }
     }
 """.trimIndent()
