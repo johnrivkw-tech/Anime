@@ -18,6 +18,8 @@ import com.example.animetracker.data.MangaEntity
 import com.example.animetracker.data.MangaRepository
 import com.example.animetracker.data.ProfilePrefs
 import com.example.animetracker.data.ThemePrefs
+import com.example.animetracker.data.FactionPrefs
+import com.example.animetracker.ui.model.Faction
 import com.example.animetracker.ui.theme.AppThemeOption
 import com.example.animetracker.data.network.AniListAiringSchedule
 import com.example.animetracker.data.network.AniListCharacterEdge
@@ -64,10 +66,14 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val geminiChatRepository = GeminiChatRepository()
     private val profilePrefs = ProfilePrefs(application)
     private val themePrefs = ThemePrefs(application)
+    private val factionPrefs = FactionPrefs(application)
     private val lightNovelFolderPrefs = LightNovelFolderPrefs(application)
 
     private val _themeOption = MutableStateFlow(themePrefs.getTheme())
     val themeOption: StateFlow<AppThemeOption> = _themeOption.asStateFlow()
+
+    private val _faction = MutableStateFlow(factionPrefs.getFaction())
+    val faction: StateFlow<Faction> = _faction.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -402,6 +408,11 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     fun setTheme(theme: AppThemeOption) {
         themePrefs.setTheme(theme)
         _themeOption.value = theme
+    }
+
+    fun setFaction(faction: Faction) {
+        factionPrefs.setFaction(faction)
+        _faction.value = faction
     }
 
     fun onSearchQueryChange(query: String) {
