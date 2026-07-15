@@ -41,13 +41,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.animetracker.data.network.AniListAiringSchedule
-import com.example.animetracker.ui.theme.Blaze
 import com.example.animetracker.ui.theme.Bone
-import com.example.animetracker.ui.theme.Charcoal
-import com.example.animetracker.ui.theme.CharcoalHigh
 import com.example.animetracker.ui.theme.ErrorRed
 import com.example.animetracker.ui.theme.Smoke
-import com.example.animetracker.ui.theme.Void
 import com.example.animetracker.viewmodel.AnimeViewModel
 import java.time.Instant
 import java.time.LocalDate
@@ -80,7 +76,7 @@ fun ScheduleScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Void)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Row(
             modifier = Modifier
@@ -118,7 +114,7 @@ fun ScheduleScreen(
 
         when {
             isLoading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Blaze)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
             error != null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(text = error ?: "", color = ErrorRed, modifier = Modifier.padding(24.dp))
@@ -151,7 +147,7 @@ private fun DayPill(date: LocalDate, isSelected: Boolean, onClick: () -> Unit) {
         modifier = Modifier
             .clip(RoundedCornerShape(50))
             .clickable(onClick = onClick),
-        color = if (isSelected) Blaze else CharcoalHigh,
+        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(50)
     ) {
         Column(
@@ -161,14 +157,14 @@ private fun DayPill(date: LocalDate, isSelected: Boolean, onClick: () -> Unit) {
             Text(
                 text = dayLabel,
                 style = MaterialTheme.typography.labelMedium,
-                color = if (isSelected) Void else Smoke
+                color = if (isSelected) MaterialTheme.colorScheme.background else Smoke
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = date.dayOfMonth.toString(),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = if (isSelected) Void else Bone
+                color = if (isSelected) MaterialTheme.colorScheme.background else Bone
             )
         }
     }
@@ -231,7 +227,7 @@ private fun ScheduleRow(
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
                     .clickable(enabled = !isInList, onClick = onAddClick),
-                color = Charcoal,
+                color = MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(50)
             ) {
                 Row(
@@ -241,7 +237,7 @@ private fun ScheduleRow(
                     Icon(
                         imageVector = if (isInList) Icons.Filled.Check else Icons.Filled.Add,
                         contentDescription = null,
-                        tint = if (isInList) Smoke else Blaze,
+                        tint = if (isInList) Smoke else MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -249,7 +245,7 @@ private fun ScheduleRow(
                         text = if (isInList) "In My List" else "My List",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = if (isInList) Smoke else Blaze
+                        color = if (isInList) Smoke else MaterialTheme.colorScheme.primary
                     )
                 }
             }
