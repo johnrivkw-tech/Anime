@@ -24,6 +24,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.animetracker.ui.navigation.BottomNavBar
 import com.example.animetracker.ui.navigation.Destination
+import com.example.animetracker.ui.navigation.PROFILE_ROUTE
 import com.example.animetracker.ui.screens.HomeFeedScreen
 import com.example.animetracker.ui.screens.HomeScreen
 import com.example.animetracker.ui.screens.LightNovelsScreen
@@ -87,7 +88,7 @@ private fun VizoraApp(viewModel: AnimeViewModel) {
                     onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") },
                     onChatClick = { navController.navigate("ai_chat") },
                     onReadingClick = { navController.navigate("reading") },
-                    onSearchClick = { navController.navigate("search") }
+                    onProfileClick = { navController.navigate(PROFILE_ROUTE) }
                 )
             }
             composable(Destination.MY_LIST.route) {
@@ -97,17 +98,17 @@ private fun VizoraApp(viewModel: AnimeViewModel) {
                 ScheduleScreen(
                     viewModel = viewModel,
                     onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") },
-                    onSearchClick = { navController.navigate("search") }
+                    onSearchClick = { navController.navigate(Destination.SEARCH.route) }
                 )
             }
-            composable("search") {
+            composable(Destination.SEARCH.route) {
                 SearchScreen(
                     viewModel = viewModel,
                     onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") },
                     onBack = { navController.popBackStack() }
                 )
             }
-            composable(Destination.PROFILE.route) {
+            composable(PROFILE_ROUTE) {
                 ProfileScreen(
                     viewModel = viewModel,
                     onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") }
@@ -153,8 +154,7 @@ private fun VizoraApp(viewModel: AnimeViewModel) {
                 AnimeDetailsScreen(
                     viewModel = viewModel,
                     aniListId = aniListId,
-                    onBack = { navController.popBackStack() },
-                    onAnimeClick = { relatedId -> navController.navigate("details/$relatedId") }
+                    onBack = { navController.popBackStack() }
                 )
             }
         }
