@@ -115,14 +115,6 @@ fun HomeFeedScreen(
                 }
                 item {
                     AnimeSectionRow(
-                        title = "Trending Now",
-                        items = trendingItems,
-                        isLoading = isLoading && trendingItems.isEmpty(),
-                        onItemClick = { it.aniListId?.let(onAnimeClick) }
-                    )
-                }
-                item {
-                    AnimeSectionRow(
                         title = "Popular This Season",
                         items = popularItems,
                         isLoading = isLoading && popularItems.isEmpty(),
@@ -161,6 +153,14 @@ fun HomeFeedScreen(
                         onItemClick = { it.aniListId?.let(onAnimeClick) },
                         emptyMessage = aiRecsError
                             ?: "Track a few anime to unlock AI picks based on your taste"
+                    )
+                }
+                item {
+                    AnimeSectionRow(
+                        title = "Trending Now",
+                        items = trendingItems,
+                        isLoading = isLoading && trendingItems.isEmpty(),
+                        onItemClick = { it.aniListId?.let(onAnimeClick) }
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
