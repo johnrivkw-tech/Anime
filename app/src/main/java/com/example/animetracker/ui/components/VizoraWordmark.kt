@@ -36,6 +36,10 @@ fun VizoraWordmark(
     fontSize: TextUnit = 28.sp,
     markSize: Dp = 28.dp
 ) {
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryColor = MaterialTheme.colorScheme.secondary
+    val backgroundColor = MaterialTheme.colorScheme.background
+
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         Canvas(modifier = Modifier.size(markSize)) {
             val w = size.width
@@ -52,7 +56,7 @@ fun VizoraWordmark(
             drawPath(
                 path = diamond,
                 brush = Brush.linearGradient(
-                    colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary),
+                    colors = listOf(primaryColor, secondaryColor),
                     start = Offset(0f, 0f),
                     end = Offset(w, h)
                 )
@@ -66,7 +70,7 @@ fun VizoraWordmark(
             }
             drawPath(
                 path = chevron,
-                color = MaterialTheme.colorScheme.background,
+                color = backgroundColor,
                 style = Stroke(width = w * 0.12f, cap = StrokeCap.Round, join = StrokeJoin.Round)
             )
         }
@@ -76,7 +80,7 @@ fun VizoraWordmark(
         Text(
             text = "VIZORA",
             style = TextStyle(
-                brush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)),
+                brush = Brush.linearGradient(listOf(primaryColor, secondaryColor)),
                 fontWeight = FontWeight.Black,
                 fontSize = fontSize,
                 letterSpacing = (fontSize.value * 0.05f).sp
