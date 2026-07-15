@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.animetracker.ui.model.HomeCardItem
 import com.example.animetracker.ui.theme.Bone
-import com.example.animetracker.ui.theme.Pulse
 import com.example.animetracker.ui.theme.Smoke
 import java.util.Locale
 
@@ -81,7 +80,7 @@ fun AnimePosterCard(item: HomeCardItem, onClick: () -> Unit, modifier: Modifier 
                 Icon(
                     imageVector = Icons.Filled.Star,
                     contentDescription = null,
-                    tint = Pulse,
+                    tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(11.dp)
                 )
                 Spacer(modifier = Modifier.width(3.dp))
