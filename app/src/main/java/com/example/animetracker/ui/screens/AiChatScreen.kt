@@ -51,10 +51,7 @@ import androidx.compose.ui.unit.dp
 import com.example.animetracker.R
 import com.example.animetracker.ui.components.AnimePosterCard
 import com.example.animetracker.ui.model.ChatMessage
-import com.example.animetracker.ui.theme.Blaze
 import com.example.animetracker.ui.theme.Bone
-import com.example.animetracker.ui.theme.Charcoal
-import com.example.animetracker.ui.theme.CharcoalHigh
 import com.example.animetracker.ui.theme.ErrorRed
 import com.example.animetracker.ui.theme.Smoke
 import com.example.animetracker.viewmodel.AnimeViewModel
@@ -106,7 +103,7 @@ fun AiChatScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Charcoal)
+                    .background(MaterialTheme.colorScheme.surface)
                     .imePadding()
             ) {
                 if (error != null) {
@@ -129,12 +126,12 @@ fun AiChatScreen(
                         modifier = Modifier.weight(1f),
                         placeholder = { Text("Ask for a recommendation…") },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = CharcoalHigh,
-                            unfocusedContainerColor = CharcoalHigh,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                             focusedTextColor = Bone,
                             unfocusedTextColor = Bone,
-                            cursorColor = Blaze,
-                            focusedIndicatorColor = Blaze,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
                             unfocusedIndicatorColor = Smoke
                         ),
                         shape = RoundedCornerShape(20.dp),
@@ -151,7 +148,7 @@ fun AiChatScreen(
                         },
                         enabled = !isLoading && input.isNotBlank()
                     ) {
-                        Icon(Icons.Filled.Send, contentDescription = "Send", tint = Blaze)
+                        Icon(Icons.Filled.Send, contentDescription = "Send", tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -167,7 +164,7 @@ fun AiChatScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Charcoal.copy(alpha = 0.72f))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
             )
             if (messages.isEmpty() && !isLoading) {
                 Column(
@@ -224,7 +221,7 @@ private fun ChatBubble(message: ChatMessage, onAnimeClick: (Int) -> Unit) {
                         bottomEnd = if (message.isUser) 4.dp else 16.dp
                     )
                 )
-                .background(if (message.isUser) Blaze else CharcoalHigh)
+                .background(if (message.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
             Text(
@@ -253,11 +250,11 @@ private fun TypingBubble() {
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 4.dp))
-                .background(CharcoalHigh)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
             CircularProgressIndicator(
-                color = Blaze,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(16.dp),
                 strokeWidth = 2.dp
             )
