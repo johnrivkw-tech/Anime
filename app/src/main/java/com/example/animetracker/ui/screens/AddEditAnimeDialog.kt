@@ -37,10 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.example.animetracker.data.Anime
 import com.example.animetracker.data.AnimeStatus
-import com.example.animetracker.ui.theme.Blaze
 import com.example.animetracker.ui.theme.Bone
-import com.example.animetracker.ui.theme.CharcoalHigh
-import com.example.animetracker.ui.theme.Pulse
 
 /**
  * Shared dialog for both adding a new anime and editing an existing one.
@@ -70,7 +67,7 @@ fun AddEditAnimeDialog(
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = CharcoalHigh)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
@@ -139,7 +136,7 @@ fun AddEditAnimeDialog(
                             onClick = { status = option },
                             label = { Text(option.label) },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Blaze,
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = Bone
                             )
                         )
@@ -162,7 +159,7 @@ fun AddEditAnimeDialog(
                             imageVector = if (star <= rating) Icons.Filled.Star else Icons.Filled.StarBorder,
                             contentDescription = "Rate $star out of 10",
                             tint = if (star <= rating) {
-                                Pulse
+                                MaterialTheme.colorScheme.secondary
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
