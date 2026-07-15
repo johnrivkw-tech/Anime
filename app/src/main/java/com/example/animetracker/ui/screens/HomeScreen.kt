@@ -53,12 +53,8 @@ import com.example.animetracker.data.AnimeStatus
 import com.example.animetracker.ui.components.AnimeCard
 import com.example.animetracker.ui.components.statusColor
 import com.example.animetracker.ui.components.statusIcon
-import com.example.animetracker.ui.theme.Blaze
 import com.example.animetracker.ui.theme.Bone
-import com.example.animetracker.ui.theme.Charcoal
-import com.example.animetracker.ui.theme.CharcoalHigh
 import com.example.animetracker.ui.theme.Smoke
-import com.example.animetracker.ui.theme.Void
 import com.example.animetracker.viewmodel.AnimeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -90,11 +86,11 @@ fun HomeScreen(viewModel: AnimeViewModel) {
     val planCount = allAnime.count { it.status == AnimeStatus.PLAN_TO_WATCH }
 
     Scaffold(
-        containerColor = Void,
+        containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { showSearchDialog = true },
-                containerColor = Blaze,
+                containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = Bone,
                 elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 0.dp),
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
@@ -189,13 +185,13 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                     }
                 },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Charcoal,
-                    unfocusedContainerColor = Charcoal,
-                    focusedBorderColor = Blaze,
-                    unfocusedBorderColor = Charcoal,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.surface,
                     focusedTextColor = Bone,
                     unfocusedTextColor = Bone,
-                    cursorColor = Blaze
+                    cursorColor = MaterialTheme.colorScheme.primary
                 ),
                 singleLine = true
             )
@@ -215,9 +211,9 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                     label = { Text("All", fontWeight = FontWeight.Bold) },
                     shape = RoundedCornerShape(50),
                     colors = FilterChipDefaults.filterChipColors(
-                        containerColor = CharcoalHigh,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
                         labelColor = Smoke,
-                        selectedContainerColor = Blaze,
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
                         selectedLabelColor = Bone
                     )
                 )
@@ -236,7 +232,7 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                         },
                         shape = RoundedCornerShape(50),
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = CharcoalHigh,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             labelColor = Smoke,
                             iconColor = Smoke,
                             selectedContainerColor = color,
@@ -262,7 +258,7 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                                 .clip(CircleShape)
                                 .background(
                                     Brush.radialGradient(
-                                        listOf(Blaze.copy(alpha = 0.20f), Charcoal)
+                                        listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.20f), MaterialTheme.colorScheme.surface)
                                     )
                                 )
                                 .padding(24.dp)
@@ -270,7 +266,7 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                             Icon(
                                 imageVector = Icons.Filled.VideoLibrary,
                                 contentDescription = null,
-                                tint = Blaze,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.width(40.dp)
                             )
                         }
@@ -376,7 +372,7 @@ private fun StatTile(
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
-        color = if (selected) color.copy(alpha = 0.18f) else Charcoal,
+        color = if (selected) color.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surface,
         modifier = Modifier.width(112.dp)
     ) {
         Column(
