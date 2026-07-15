@@ -5,13 +5,13 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,10 +28,8 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Movie
@@ -66,9 +64,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.animetracker.ui.components.AnimeSectionRow
+import com.example.animetracker.ui.model.Faction
 import com.example.animetracker.ui.model.GenreCount
-import com.example.animetracker.ui.model.ProfileBadge
 import com.example.animetracker.ui.model.ProfileStats
+import com.example.animetracker.ui.model.RankTier
+import com.example.animetracker.ui.model.currentRank
+import com.example.animetracker.ui.model.nextRank
+import com.example.animetracker.ui.model.ranksFor
 import com.example.animetracker.ui.theme.Bone
 import com.example.animetracker.ui.theme.Smoke
 import com.example.animetracker.viewmodel.AnimeViewModel
@@ -88,6 +90,7 @@ fun ProfileScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}) {
     val displayName by viewModel.profileDisplayName.collectAsState()
     val stats by viewModel.profileStats.collectAsState()
     val favorites by viewModel.favoriteAnime.collectAsState()
+    val faction by viewModel.faction.collectAsState()
 
     val bannerPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -168,10 +171,12 @@ fun ProfileScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}) {
             }
             item {
                 Spacer(modifier = Modifier.height(12.dp))
-                SectionLabel("Achievements")
+                SectionLabel("Rank")
                 Spacer(modifier = Modifier.height(8.dp))
-                AchievementsGrid(
-                    badges = computeBadges(stats),
+                RankSection(
+                    faction = faction,
+                    completed = stats.completed,
+                    onFactionChange = { viewModel.setFaction(it) },
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
@@ -603,117 +608,221 @@ private fun GenreBar(genreCount: GenreCount, fraction: Float) {
     }
 }
 
+/**
+ * One Piece-flavored rank ladder. The user picks a faction (Pirate or
+ * Marine) and climbs it purely by how many titles they've marked
+ * Completed — nothing here is stored beyond the faction choice itself,
+ * so the rank always stays in sync with the real watchlist.
+ */
 @Composable
-private fun AchievementsGrid(badges: List<ProfileBadge>, modifier: Modifier = Modifier) {
+private fun RankSection(
+    faction: Faction,
+    completed: Int,
+    onFactionChange: (Faction) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(modifier = modifier) {
-        badges.chunked(2).forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+        FactionSwitcher(selected = faction, onSelect = onFactionChange)
+        Spacer(modifier = Modifier.height(12.dp))
+        RankProgressCard(faction = faction, completed = completed)
+        Spacer(modifier = Modifier.height(12.dp))
+        RankLadder(faction = faction, completed = completed)
+    }
+}
+
+@Composable
+private fun FactionSwitcher(selected: Faction, onSelect: (Faction) -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Faction.entries.forEach { option ->
+            val isSelected = option == selected
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
+                    .clickable { onSelect(option) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
             ) {
-                row.forEach { badge ->
-                    BadgeCard(badge = badge, modifier = Modifier.weight(1f))
-                }
-                if (row.size == 1) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
+                Text(
+                    text = option.displayName,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            Spacer(modifier = Modifier.height(10.dp))
         }
     }
 }
 
 @Composable
-private fun BadgeCard(badge: ProfileBadge, modifier: Modifier = Modifier) {
-    val contentColor = if (badge.isUnlocked) MaterialTheme.colorScheme.primary else Smoke
+private fun RankProgressCard(faction: Faction, completed: Int, modifier: Modifier = Modifier) {
+    val current = currentRank(faction, completed)
+    val next = nextRank(faction, completed)
+
     Surface(
-        modifier = modifier.aspectRatio(1.5f),
-        shape = RoundedCornerShape(14.dp),
-        color = if (badge.isUnlocked) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp).fillMaxSize()
-        ) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Icon(imageVector = badge.icon, contentDescription = null, tint = contentColor)
-                if (!badge.isUnlocked) {
-                    Icon(
-                        imageVector = Icons.Filled.Lock,
-                        contentDescription = "Locked",
-                        tint = Smoke,
-                        modifier = Modifier.size(14.dp)
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = (current?.level ?: 0).toString(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Bone
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = current?.title ?: "Unranked",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "${faction.displayName} · Level ${current?.level ?: 0} of 7",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = badge.title,
-                style = MaterialTheme.typography.titleSmall,
-                color = if (badge.isUnlocked) Bone else Smoke,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = badge.description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2
-            )
+
+            if (next != null) {
+                val prevThreshold = current?.completedRequired ?: 0
+                val span = (next.completedRequired - prevThreshold).coerceAtLeast(1)
+                val progress = ((completed - prevThreshold).toFloat() / span.toFloat()).coerceIn(0f, 1f)
+
+                Spacer(modifier = Modifier.height(14.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(MaterialTheme.colorScheme.background)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(progress.coerceIn(0.02f, 1f))
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
+                                )
+                            )
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "$completed / ${next.completedRequired} completed to become ${next.title}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(
+                    text = "Max rank reached — $completed completed titles",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
 
-/**
- * Fun, purely-derived achievements. Nothing here is stored — every badge is
- * recomputed from the current [ProfileStats] on every recomposition, so
- * there's no risk of them ever drifting out of sync with the real library.
- */
-private fun computeBadges(stats: ProfileStats): List<ProfileBadge> = listOf(
-    ProfileBadge(
-        title = "Getting Started",
-        description = "Track your first title",
-        icon = Icons.Filled.PlayCircle,
-        isUnlocked = stats.totalAnime >= 1
-    ),
-    ProfileBadge(
-        title = "Collector",
-        description = "Track 25+ titles",
-        icon = Icons.Filled.List,
-        isUnlocked = stats.totalAnime >= 25
-    ),
-    ProfileBadge(
-        title = "Completionist",
-        description = "Finish 10+ titles",
-        icon = Icons.Filled.CheckCircle,
-        isUnlocked = stats.completed >= 10
-    ),
-    ProfileBadge(
-        title = "Binge Master",
-        description = "24+ hours watched",
-        icon = Icons.Filled.LocalFireDepartment,
-        isUnlocked = stats.totalWatchMinutes >= 24 * 60
-    ),
-    ProfileBadge(
-        title = "Marathoner",
-        description = "7+ full days watched",
-        icon = Icons.Filled.EmojiEvents,
-        isUnlocked = stats.watchDays >= 7
-    ),
-    ProfileBadge(
-        title = "Critic",
-        description = "Rate 10+ titles",
-        icon = Icons.Filled.Star,
-        isUnlocked = stats.ratedCount >= 10
-    ),
-    ProfileBadge(
-        title = "Bookworm",
-        description = "5+ manga & novels",
-        icon = Icons.Filled.MenuBook,
-        isUnlocked = (stats.mangaCount + stats.lightNovelCount) >= 5
-    ),
-    ProfileBadge(
-        title = "Otaku Elite",
-        description = "10+ favorites",
-        icon = Icons.Filled.Favorite,
-        isUnlocked = stats.favorites >= 10
-    )
-)
+@Composable
+private fun RankLadder(faction: Faction, completed: Int, modifier: Modifier = Modifier) {
+    val tiers = remember(faction) { ranksFor(faction).sortedByDescending { it.level } }
+    val currentLevel = currentRank(faction, completed)?.level
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+            tiers.forEach { tier ->
+                RankLadderRow(tier = tier, isUnlocked = completed >= tier.completedRequired, isCurrent = tier.level == currentLevel)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RankLadderRow(tier: RankTier, isUnlocked: Boolean, isCurrent: Boolean) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(
+                    if (isUnlocked) MaterialTheme.colorScheme.primary.copy(alpha = if (isCurrent) 1f else 0.35f)
+                    else MaterialTheme.colorScheme.background
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isUnlocked) {
+                Text(
+                    text = tier.level.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Bone
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Filled.Lock,
+                    contentDescription = "Locked",
+                    tint = Smoke,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = tier.title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                color = if (isUnlocked) Bone else Smoke
+            )
+            Text(
+                text = "${tier.completedRequired} completed",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (isCurrent) {
+            Icon(
+                imageVector = Icons.Filled.CheckCircle,
+                contentDescription = "Current rank",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
