@@ -17,7 +17,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.animetracker.ui.model.HomeCardItem
-import com.example.animetracker.ui.theme.Blaze
 import com.example.animetracker.ui.theme.Bone
 import com.example.animetracker.ui.theme.Smoke
 
@@ -41,7 +40,7 @@ fun AnimeSectionRow(
         when {
             isLoading -> {
                 Row(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    CircularProgressIndicator(color = Blaze, modifier = Modifier.size(24.dp))
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                 }
             }
             items.isEmpty() -> {
