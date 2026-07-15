@@ -153,7 +153,8 @@ private fun VizoraApp(viewModel: AnimeViewModel) {
                 AnimeDetailsScreen(
                     viewModel = viewModel,
                     aniListId = aniListId,
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onAnimeClick = { relatedId -> navController.navigate("details/$relatedId") }
                 )
             }
         }
