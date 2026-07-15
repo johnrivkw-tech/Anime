@@ -1,5 +1,10 @@
 package com.example.animetracker.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -19,15 +24,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,7 +36,9 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +47,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -65,20 +69,16 @@ fun HomeScreen(viewModel: AnimeViewModel) {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val statusFilter by viewModel.statusFilter.collectAsState()
 
-    val onlineResults by viewModel.searchResults.collectAsState()
-    val isSearchingApi by viewModel.isSearchingApi.collectAsState()
-    val searchApiError by viewModel.searchApiError.collectAsState()
-
     var showDialog by remember { mutableStateOf(false) }
     var animeBeingEdited by remember { mutableStateOf<Anime?>(null) }
 
-    var showSearchDialog by remember { mutableStateOf(false) }
-    var onlineQuery by remember { mutableStateOf("") }
+    var searchExpanded by remember { mutableStateOf(searchQuery.isNotEmpty()) }
+    val searchFocusRequester = remember { FocusRequester() }
 
-    fun closeSearchDialog() {
-        showSearchDialog = false
-        onlineQuery = ""
-        viewModel.clearSearchResults()
+    LaunchedEffect(searchExpanded) {
+        if (searchExpanded) {
+            searchFocusRequester.requestFocus()
+        }
     }
 
     val watchingCount = allAnime.count { it.status == AnimeStatus.WATCHING }
@@ -86,40 +86,91 @@ fun HomeScreen(viewModel: AnimeViewModel) {
     val planCount = allAnime.count { it.status == AnimeStatus.PLAN_TO_WATCH }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showSearchDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = Bone,
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 0.dp),
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("Add Anime", fontWeight = FontWeight.Bold) }
-            )
-        }
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Header
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                Text(
-                    text = "My List",
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Black,
-                    color = Bone
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = if (allAnime.isEmpty()) {
-                        "Your collection is waiting to be filled"
-                    } else {
-                        "${allAnime.size} ${if (allAnime.size == 1) "title" else "titles"} in your collection"
+            // Header — title on the left, a search icon on the right that
+            // expands into a filter field instead of a bar that's always
+            // taking up space.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "My List",
+                        style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.Black,
+                        color = Bone
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = if (allAnime.isEmpty()) {
+                            "Your collection is waiting to be filled"
+                        } else {
+                            "${allAnime.size} ${if (allAnime.size == 1) "title" else "titles"} in your collection"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Smoke
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        searchExpanded = !searchExpanded
+                        if (!searchExpanded) viewModel.onSearchQueryChange("")
                     },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Smoke
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface)
+                ) {
+                    Icon(
+                        imageVector = if (searchExpanded) Icons.Default.Close else Icons.Default.Search,
+                        contentDescription = if (searchExpanded) "Close search" else "Search your list",
+                        tint = Smoke
+                    )
+                }
+            }
+
+            AnimatedVisibility(
+                visible = searchExpanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = viewModel::onSearchQueryChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 12.dp)
+                        .focusRequester(searchFocusRequester),
+                    shape = RoundedCornerShape(14.dp),
+                    placeholder = { Text("Search your watchlist", color = Smoke) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Smoke) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear search", tint = Smoke)
+                            }
+                        }
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.surface,
+                        focusedTextColor = Bone,
+                        unfocusedTextColor = Bone,
+                        cursorColor = MaterialTheme.colorScheme.primary
+                    ),
+                    singleLine = true
                 )
             }
 
@@ -166,83 +217,6 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                 )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = viewModel::onSearchQueryChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(14.dp),
-                placeholder = { Text("Search your watchlist", color = Smoke) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Smoke) },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
-                            Icon(Icons.Default.Close, contentDescription = "Clear search", tint = Smoke)
-                        }
-                    }
-                },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.surface,
-                    focusedTextColor = Bone,
-                    unfocusedTextColor = Bone,
-                    cursorColor = MaterialTheme.colorScheme.primary
-                ),
-                singleLine = true
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FilterChip(
-                    selected = statusFilter == null,
-                    onClick = { viewModel.onStatusFilterChange(null) },
-                    label = { Text("All", fontWeight = FontWeight.Bold) },
-                    shape = RoundedCornerShape(50),
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        labelColor = Smoke,
-                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                        selectedLabelColor = Bone
-                    )
-                )
-                AnimeStatus.entries.forEach { status ->
-                    val color = statusColor(status)
-                    FilterChip(
-                        selected = statusFilter == status,
-                        onClick = { viewModel.onStatusFilterChange(status) },
-                        label = { Text(status.label, fontWeight = FontWeight.Bold) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = statusIcon(status),
-                                contentDescription = null,
-                                modifier = Modifier.width(16.dp)
-                            )
-                        },
-                        shape = RoundedCornerShape(50),
-                        colors = FilterChipDefaults.filterChipColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            labelColor = Smoke,
-                            iconColor = Smoke,
-                            selectedContainerColor = color,
-                            selectedLabelColor = Bone,
-                            selectedLeadingIconColor = Bone
-                        )
-                    )
-                }
-            }
-
             Spacer(modifier = Modifier.height(6.dp))
 
             val isFiltering = searchQuery.isNotEmpty() || statusFilter != null
@@ -282,11 +256,26 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                             text = if (isFiltering) {
                                 "Try a different search or filter"
                             } else {
-                                "Tap + Add Anime to build your collection"
+                                "Search for a title and set its status to add it here"
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = Smoke
                         )
+                        if (!isFiltering) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            TextButton(
+                                onClick = {
+                                    animeBeingEdited = null
+                                    showDialog = true
+                                }
+                            ) {
+                                Text(
+                                    text = "Or add a title manually",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                 }
             } else {
@@ -332,29 +321,6 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                     viewModel.addAnime(name, watched, total, status, rating)
                 }
                 showDialog = false
-            }
-        )
-    }
-
-    if (showSearchDialog) {
-        SearchAnimeDialog(
-            query = onlineQuery,
-            onQueryChange = {
-                onlineQuery = it
-                viewModel.searchOnline(it)
-            },
-            results = onlineResults,
-            isLoading = isSearchingApi,
-            error = searchApiError,
-            onDismiss = { closeSearchDialog() },
-            onSelect = { result ->
-                viewModel.addAnimeFromSearchResult(result)
-                closeSearchDialog()
-            },
-            onAddManually = {
-                closeSearchDialog()
-                animeBeingEdited = null
-                showDialog = true
             }
         )
     }
