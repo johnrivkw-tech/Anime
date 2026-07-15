@@ -1,4 +1,5 @@
 package com.example.animetracker.ui.screens
+import androidx.compose.material3.MaterialTheme
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -25,10 +26,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.animetracker.ui.theme.Bone
-import com.example.animetracker.ui.theme.Blaze
 import com.example.animetracker.ui.theme.ErrorRed
 import com.example.animetracker.ui.theme.Smoke
-import com.example.animetracker.ui.theme.Void
 import com.example.animetracker.viewmodel.AnimeViewModel
 
 /**
@@ -49,7 +48,7 @@ fun MangaReaderScreen(
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         when {
             isLoading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Blaze)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
             error != null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column {
