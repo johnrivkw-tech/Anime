@@ -68,13 +68,9 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.animetracker.data.MangaEntity
 import com.example.animetracker.data.network.MangaDexManga
-import com.example.animetracker.ui.theme.Blaze
 import com.example.animetracker.ui.theme.Bone
-import com.example.animetracker.ui.theme.Charcoal
-import com.example.animetracker.ui.theme.CharcoalHigh
 import com.example.animetracker.ui.theme.ErrorRed
 import com.example.animetracker.ui.theme.Smoke
-import com.example.animetracker.ui.theme.Void
 import com.example.animetracker.viewmodel.AnimeViewModel
 import java.text.DateFormat
 import java.util.Date
@@ -97,7 +93,7 @@ fun LightNovelsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Void)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Text(
             text = "Reading",
@@ -109,8 +105,8 @@ fun LightNovelsScreen(
 
         TabRow(
             selectedTabIndex = selectedTab,
-            containerColor = Void,
-            contentColor = Blaze
+            containerColor = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.primary
         ) {
             Tab(
                 selected = selectedTab == 0,
@@ -202,7 +198,7 @@ private fun NovelsTab(viewModel: AnimeViewModel) {
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(CharcoalHigh)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Icon(Icons.Filled.FolderOpen, contentDescription = "Link a folder", tint = Bone)
             }
@@ -212,9 +208,9 @@ private fun NovelsTab(viewModel: AnimeViewModel) {
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(Blaze)
+                    .background(MaterialTheme.colorScheme.primary)
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "Add a PDF", tint = Void)
+                Icon(Icons.Filled.Add, contentDescription = "Add a PDF", tint = MaterialTheme.colorScheme.background)
             }
         }
 
@@ -225,7 +221,7 @@ private fun NovelsTab(viewModel: AnimeViewModel) {
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .clip(RoundedCornerShape(12.dp)),
-                color = CharcoalHigh,
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Row(
@@ -234,7 +230,7 @@ private fun NovelsTab(viewModel: AnimeViewModel) {
                         .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Filled.Folder, contentDescription = null, tint = Blaze, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Filled.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = "Linked: ${linkedFolderName ?: "folder"}",
@@ -330,10 +326,10 @@ private fun MangaTab(viewModel: AnimeViewModel, onMangaSelected: () -> Unit) {
                 colors = TextFieldDefaults.colors(
                     focusedTextColor = Bone,
                     unfocusedTextColor = Bone,
-                    focusedContainerColor = CharcoalHigh,
-                    unfocusedContainerColor = CharcoalHigh,
-                    focusedIndicatorColor = Blaze,
-                    unfocusedIndicatorColor = Charcoal
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.surface
                 )
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -342,9 +338,9 @@ private fun MangaTab(viewModel: AnimeViewModel, onMangaSelected: () -> Unit) {
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(Blaze)
+                    .background(MaterialTheme.colorScheme.primary)
             ) {
-                Icon(Icons.Filled.Search, contentDescription = "Search", tint = Void)
+                Icon(Icons.Filled.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.background)
             }
         }
 
@@ -358,7 +354,7 @@ private fun MangaTab(viewModel: AnimeViewModel, onMangaSelected: () -> Unit) {
             if (isSearching) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Blaze)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -434,7 +430,7 @@ private fun MangaRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onOpen),
-        color = CharcoalHigh,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(14.dp)
     ) {
         Row(
@@ -455,7 +451,7 @@ private fun MangaRow(
                     modifier = Modifier
                         .size(width = 48.dp, height = 68.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Charcoal),
+                        .background(MaterialTheme.colorScheme.surface),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Filled.MenuBook, contentDescription = null, tint = Smoke)
@@ -478,7 +474,7 @@ private fun MangaRow(
                 Icon(
                     trailingIcon,
                     contentDescription = null,
-                    tint = if (trailingIcon == Icons.Filled.Check) Smoke else Blaze
+                    tint = if (trailingIcon == Icons.Filled.Check) Smoke else MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -498,7 +494,7 @@ private fun ReadingRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onOpen),
-        color = CharcoalHigh,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(14.dp)
     ) {
         Row(
@@ -509,10 +505,10 @@ private fun ReadingRow(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Charcoal),
+                    .background(MaterialTheme.colorScheme.surface),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.PictureAsPdf, contentDescription = null, tint = Blaze)
+                Icon(Icons.Filled.PictureAsPdf, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             }
 
             Spacer(modifier = Modifier.width(14.dp))
