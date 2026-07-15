@@ -45,12 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.animetracker.ui.model.HomeCardItem
-import com.example.animetracker.ui.theme.Blaze
 import com.example.animetracker.ui.theme.Bone
-import com.example.animetracker.ui.theme.Charcoal
-import com.example.animetracker.ui.theme.Pulse
 import com.example.animetracker.ui.theme.Smoke
-import com.example.animetracker.ui.theme.Void
 
 @Composable
 fun FeaturedBanner(
@@ -70,9 +66,9 @@ fun FeaturedBanner(
             modifier = modifier
                 .fillMaxWidth()
                 .height(bannerHeight)
-                .background(Charcoal)
+                .background(MaterialTheme.colorScheme.surface)
         ) {
-            CircularProgressIndicator(color = Blaze, modifier = Modifier.align(Alignment.Center))
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, modifier = Modifier.align(Alignment.Center))
         }
         return
     }
@@ -113,7 +109,7 @@ fun FeaturedBanner(
                                     0.0f to Color.Transparent,
                                     0.45f to Color.Black.copy(alpha = 0.55f),
                                     0.75f to Color.Black.copy(alpha = 0.92f),
-                                    1.0f to Void
+                                    1.0f to MaterialTheme.colorScheme.background
                                 )
                             )
                         )
@@ -169,7 +165,7 @@ fun FeaturedBanner(
                             .height(6.dp)
                             .width(if (isSelected) 20.dp else 6.dp)
                             .clip(CircleShape)
-                            .background(if (isSelected) Blaze else Bone.copy(alpha = 0.4f))
+                            .background(if (isSelected) MaterialTheme.colorScheme.primary else Bone.copy(alpha = 0.4f))
                     )
                 }
             }
@@ -208,7 +204,7 @@ fun FeaturedBanner(
                     ) {
                         DropdownMenuItem(
                             text = { Text("Lena AI") },
-                            leadingIcon = { Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Pulse) },
+                            leadingIcon = { Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
                             onClick = {
                                 menuExpanded = false
                                 onAiClick()
@@ -216,7 +212,7 @@ fun FeaturedBanner(
                         )
                         DropdownMenuItem(
                             text = { Text("Reading") },
-                            leadingIcon = { Icon(Icons.Filled.MenuBook, contentDescription = null, tint = Blaze) },
+                            leadingIcon = { Icon(Icons.Filled.MenuBook, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                             onClick = {
                                 menuExpanded = false
                                 onReadingClick()
