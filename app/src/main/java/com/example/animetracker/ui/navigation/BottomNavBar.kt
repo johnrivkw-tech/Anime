@@ -2,6 +2,10 @@ package com.example.animetracker.ui.navigation
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -17,7 +21,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -48,7 +51,6 @@ fun BottomNavBar(navController: NavHostController) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .navigationBarsPadding()
             .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
         Row(
@@ -94,16 +96,29 @@ private fun RowScope.NavPillItem(
 ) {
     val backgroundColor by animateColorAsState(
         targetValue = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else androidx.compose.ui.graphics.Color.Transparent,
+        animationSpec = tween(durationMillis = 280),
         label = "navPillBackground"
     )
     val contentColor by animateColorAsState(
         targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(durationMillis = 280),
         label = "navPillContent"
+    )
+    // Weight isn't natively animatable, so we tween the target value
+    // ourselves — this is what turns the pill's width change into a
+    // gliding motion instead of an instant snap.
+    val pillWeight by animateFloatAsState(
+        targetValue = if (selected) 1.7f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "navPillWeight"
     )
 
     Row(
         modifier = Modifier
-            .weight(if (selected) 1.7f else 1f)
+            .weight(pillWeight)
             .fillMaxHeight()
             .padding(vertical = 8.dp)
             .clip(RoundedCornerShape(24.dp))
@@ -125,8 +140,15 @@ private fun RowScope.NavPillItem(
         )
         AnimatedVisibility(
             visible = selected,
-            enter = fadeIn() + expandHorizontally(),
-            exit = fadeOut() + shrinkHorizontally()
+            enter = fadeIn(animationSpec = tween(220)) + expandHorizontally(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            ),
+            exit = fadeOut(animationSpec = tween(150)) + shrinkHorizontally(
+                animationSpec = tween(220)
+            )
         ) {
             Row {
                 Spacer(modifier = Modifier.width(6.dp))
