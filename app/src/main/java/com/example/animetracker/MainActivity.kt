@@ -32,6 +32,7 @@ import com.example.animetracker.ui.screens.MangaReaderScreen
 import com.example.animetracker.ui.screens.ProfileScreen
 import com.example.animetracker.ui.screens.ScheduleScreen
 import com.example.animetracker.ui.screens.SearchScreen
+import com.example.animetracker.ui.screens.SettingsScreen
 import com.example.animetracker.ui.screens.SplashScreen
 import com.example.animetracker.ui.theme.AnimeTrackerTheme
 import com.example.animetracker.viewmodel.AnimeViewModel
@@ -41,12 +42,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            AnimeTrackerTheme {
+            val viewModel: AnimeViewModel = viewModel()
+            val themeOption by viewModel.themeOption.collectAsState()
+
+            AnimeTrackerTheme(themeOption) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    VizoraApp()
+                    VizoraApp(viewModel)
                 }
             }
         }
@@ -54,9 +58,8 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun VizoraApp() {
+private fun VizoraApp(viewModel: AnimeViewModel) {
     val navController = rememberNavController()
-    val viewModel: AnimeViewModel = viewModel()
     val isAppReady by viewModel.isAppReady.collectAsState()
 
     if (!isAppReady) {
@@ -109,6 +112,9 @@ private fun VizoraApp() {
                     viewModel = viewModel,
                     onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") }
                 )
+            }
+            composable(Destination.SETTINGS.route) {
+                SettingsScreen(viewModel = viewModel)
             }
             composable("reading") {
                 BackHandler(onBack = backToHome)
