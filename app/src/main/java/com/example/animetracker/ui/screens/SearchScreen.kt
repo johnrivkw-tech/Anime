@@ -50,13 +50,9 @@ import androidx.compose.ui.unit.dp
 import com.example.animetracker.data.network.ANILIST_GENRES
 import com.example.animetracker.ui.components.AnimePosterCard
 import com.example.animetracker.ui.model.toHomeCardItem
-import com.example.animetracker.ui.theme.Blaze
 import com.example.animetracker.ui.theme.Bone
-import com.example.animetracker.ui.theme.Charcoal
-import com.example.animetracker.ui.theme.CharcoalHigh
 import com.example.animetracker.ui.theme.ErrorRed
 import com.example.animetracker.ui.theme.Smoke
-import com.example.animetracker.ui.theme.Void
 import com.example.animetracker.viewmodel.AnimeViewModel
 import java.time.LocalDate
 
@@ -101,7 +97,7 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
     val yearOptions = remember(currentYear) { (currentYear downTo currentYear - 14).toList() }
 
     Scaffold(
-        containerColor = Void,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("Search") },
@@ -110,7 +106,7 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Bone)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Void, titleContentColor = Bone)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background, titleContentColor = Bone)
             )
         }
     ) { paddingValues ->
@@ -182,13 +178,13 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                             shape = RoundedCornerShape(14.dp),
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = yearMenuExpanded) },
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Charcoal,
-                                unfocusedContainerColor = Charcoal,
-                                focusedBorderColor = Blaze,
-                                unfocusedBorderColor = Charcoal,
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.surface,
                                 focusedTextColor = Bone,
                                 unfocusedTextColor = Bone,
-                                focusedLabelColor = Blaze,
+                                focusedLabelColor = MaterialTheme.colorScheme.primary,
                                 unfocusedLabelColor = Smoke
                             ),
                             modifier = Modifier
@@ -198,7 +194,7 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                         DropdownMenu(
                             expanded = yearMenuExpanded,
                             onDismissRequest = { yearMenuExpanded = false },
-                            containerColor = Charcoal
+                            containerColor = MaterialTheme.colorScheme.surface
                         ) {
                             DropdownMenuItem(
                                 text = { Text("Any Year", color = Bone) },
@@ -250,7 +246,7 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                 if (isSearching) {
                     when {
                         isCatalogSearching -> {
-                            CircularProgressIndicator(color = Blaze, modifier = Modifier.align(Alignment.Center))
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, modifier = Modifier.align(Alignment.Center))
                         }
                         catalogError != null -> {
                             Text(
@@ -283,7 +279,7 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                 } else {
                     when {
                         isDiscoverLoading && discoverItems.isEmpty() -> {
-                            CircularProgressIndicator(color = Blaze, modifier = Modifier.align(Alignment.Center))
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, modifier = Modifier.align(Alignment.Center))
                         }
                         discoverError != null && discoverItems.isEmpty() -> {
                             Column(
@@ -299,7 +295,7 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                                     onClick = { viewModel.loadDiscover() },
                                     modifier = Modifier.padding(top = 12.dp),
                                     shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Blaze, contentColor = Bone)
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Bone)
                                 ) {
                                     Text("Retry")
                                 }
@@ -334,8 +330,8 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
 
 @Composable
 private fun pillChipColors() = FilterChipDefaults.filterChipColors(
-    containerColor = CharcoalHigh,
+    containerColor = MaterialTheme.colorScheme.surfaceVariant,
     labelColor = Smoke,
-    selectedContainerColor = Blaze,
+    selectedContainerColor = MaterialTheme.colorScheme.primary,
     selectedLabelColor = Bone
 )
