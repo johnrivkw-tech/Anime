@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -51,6 +52,10 @@ fun BottomNavBar(navController: NavHostController) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            // Since the app draws edge-to-edge, the bar has to push itself
+            // above the gesture/nav bar area itself, or it sits underneath
+            // (and gets partially covered by) the system's own controls.
+            .navigationBarsPadding()
             .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
         Row(
