@@ -5,7 +5,9 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,10 +15,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -26,8 +30,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,11 +59,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.example.animetracker.data.Anime
 import com.example.animetracker.data.AnimeStatus
-import com.example.animetracker.ui.components.AnimeCard
 import com.example.animetracker.ui.components.statusColor
 import com.example.animetracker.ui.components.statusIcon
 import com.example.animetracker.ui.theme.Bone
@@ -72,6 +84,7 @@ fun HomeScreen(viewModel: AnimeViewModel) {
 
     var showDialog by remember { mutableStateOf(false) }
     var animeBeingEdited by remember { mutableStateOf<Anime?>(null) }
+    var animePendingDelete by remember { mutableStateOf<Anime?>(null) }
 
     var searchExpanded by remember { mutableStateOf(searchQuery.isNotEmpty()) }
     val searchFocusRequester = remember { FocusRequester() }
@@ -281,21 +294,20 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                 }
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
+                    columns = GridCells.Fixed(9),
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 96.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(animeList, key = { it.id }) { anime ->
-                        AnimeCard(
+                        MyListPosterCard(
                             anime = anime,
-                            onIncrement = { viewModel.incrementEpisode(anime) },
-                            onEdit = {
+                            onClick = {
                                 animeBeingEdited = anime
                                 showDialog = true
                             },
-                            onDelete = { viewModel.deleteAnime(anime) },
+                            onLongClick = { animePendingDelete = anime },
                             onToggleFavorite = { viewModel.toggleFavorite(anime) }
                         )
                     }
@@ -325,6 +337,109 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                 }
                 showDialog = false
             }
+        )
+    }
+
+    val deleteTarget = animePendingDelete
+    if (deleteTarget != null) {
+        AlertDialog(
+            onDismissRequest = { animePendingDelete = null },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Remove anime?", color = Bone) },
+            text = { Text("Remove \"${deleteTarget.name}\" from your watchlist? This can't be undone.", color = Smoke) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteAnime(deleteTarget)
+                    animePendingDelete = null
+                }) {
+                    Text("Remove", color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { animePendingDelete = null }) {
+                    Text("Cancel", color = Smoke)
+                }
+            }
+        )
+    }
+}
+
+/**
+ * My List grid tile: just the poster art with the title in small text
+ * underneath, nothing else. Tap opens the edit dialog (status/episodes/
+ * rating all live there), long-press asks to remove it, and the heart in
+ * the corner toggles favorite — the old wide row-style card doesn't fit
+ * a multi-column grid and was wrapping its text one letter per line.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MyListPosterCard(
+    anime: Anime,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onToggleFavorite: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(2f / 3f)
+                .clip(RoundedCornerShape(6.dp))
+        ) {
+            if (anime.imageUrl != null) {
+                AsyncImage(
+                    model = anime.imageUrl,
+                    contentDescription = anime.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Movie,
+                        contentDescription = null,
+                        tint = Smoke,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+
+            IconButton(
+                onClick = onToggleFavorite,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(1.dp)
+                    .size(16.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.55f))
+            ) {
+                Icon(
+                    imageVector = if (anime.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    contentDescription = if (anime.isFavorite) "Unfavorite" else "Favorite",
+                    tint = if (anime.isFavorite) MaterialTheme.colorScheme.secondary else Bone,
+                    modifier = Modifier.size(9.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = anime.name,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 11.sp),
+            fontWeight = FontWeight.Medium,
+            color = Bone,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
