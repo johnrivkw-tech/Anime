@@ -28,6 +28,10 @@ interface AniListApiService {
 
     @Headers("Accept: application/json")
     @POST(".")
+    suspend fun searchCharacters(@Body request: AniListRequest): AniListCharacterSearchResponse
+
+    @Headers("Accept: application/json")
+    @POST(".")
     suspend fun getAiringSchedule(@Body request: AniListRequest): AniListScheduleResponse
 }
 
