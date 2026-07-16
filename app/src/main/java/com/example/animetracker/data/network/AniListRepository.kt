@@ -25,12 +25,13 @@ private const val MEDIA_FIELDS = """
     coverImage { extraLarge large }
     bannerImage
     genres
+    isAdult
     studios(isMain: true) { nodes { id name } }
     trailer { id site }
 """
 
 private val SEARCH_QUERY = """
-    query(${'$'}search: String, ${'$'}sort: [MediaSort], ${'$'}season: MediaSeason, ${'$'}seasonYear: Int, ${'$'}perPage: Int) {
+    query(${'$'}search: String, ${'$'}sort: [MediaSort], ${'$'}season: MediaSeason, ${'$'}seasonYear: Int, ${'$'}perPage: Int, ${'$'}isAdult: Boolean) {
       Page(perPage: ${'$'}perPage) {
         media(
           search: ${'$'}search
@@ -38,7 +39,7 @@ private val SEARCH_QUERY = """
           season: ${'$'}season
           seasonYear: ${'$'}seasonYear
           type: ANIME
-          isAdult: false
+          isAdult: ${'$'}isAdult
         ) {
           $MEDIA_FIELDS
         }
@@ -77,7 +78,7 @@ private val DETAILS_QUERY = """
 """.trimIndent()
 
 private val DISCOVER_QUERY = """
-    query(${'$'}genre: String, ${'$'}season: MediaSeason, ${'$'}seasonYear: Int, ${'$'}sort: [MediaSort], ${'$'}perPage: Int, ${'$'}page: Int) {
+    query(${'$'}genre: String, ${'$'}season: MediaSeason, ${'$'}seasonYear: Int, ${'$'}sort: [MediaSort], ${'$'}perPage: Int, ${'$'}page: Int, ${'$'}isAdult: Boolean) {
       Page(page: ${'$'}page, perPage: ${'$'}perPage) {
         media(
           genre: ${'$'}genre
@@ -85,7 +86,7 @@ private val DISCOVER_QUERY = """
           seasonYear: ${'$'}seasonYear
           sort: ${'$'}sort
           type: ANIME
-          isAdult: false
+          isAdult: ${'$'}isAdult
         ) {
           $MEDIA_FIELDS
         }
@@ -162,36 +163,40 @@ private val AIRING_SCHEDULE_QUERY = """
  */
 class AniListRepository {
 
-    suspend fun searchAnime(query: String): Result<List<AniListMedia>> = safeCall {
+    suspend fun searchAnime(query: String, includeMature: Boolean = false): Result<List<AniListMedia>> = safeCall {
         val response = AniListApi.service.searchMedia(
             AniListRequest(
                 query = SEARCH_QUERY,
-                variables = mapOf("search" to query, "perPage" to 10)
+                variables = mapOf(
+                    "search" to query,
+                    "perPage" to 10,
+                    "isAdult" to if (includeMature) null else false
+                )
             )
         )
         checkErrors(response.errors)
         response.data?.Page?.media ?: emptyList()
     }
 
-    suspend fun getTrending(): Result<List<AniListMedia>> = safeCall {
-        fetchList(sort = "TRENDING_DESC")
+    suspend fun getTrending(includeMature: Boolean = false): Result<List<AniListMedia>> = safeCall {
+        fetchList(sort = "TRENDING_DESC", includeMature = includeMature)
     }
 
-    suspend fun getPopularThisSeason(): Result<List<AniListMedia>> = safeCall {
+    suspend fun getPopularThisSeason(includeMature: Boolean = false): Result<List<AniListMedia>> = safeCall {
         val (season, year) = currentSeason()
-        fetchList(sort = "POPULARITY_DESC", season = season, seasonYear = year)
+        fetchList(sort = "POPULARITY_DESC", season = season, seasonYear = year, includeMature = includeMature)
     }
 
-    suspend fun getTopRated(): Result<List<AniListMedia>> = safeCall {
-        fetchList(sort = "SCORE_DESC")
+    suspend fun getTopRated(includeMature: Boolean = false): Result<List<AniListMedia>> = safeCall {
+        fetchList(sort = "SCORE_DESC", includeMature = includeMature)
     }
 
-    suspend fun getNewReleases(): Result<List<AniListMedia>> = safeCall {
-        fetchList(sort = "START_DATE_DESC")
+    suspend fun getNewReleases(includeMature: Boolean = false): Result<List<AniListMedia>> = safeCall {
+        fetchList(sort = "START_DATE_DESC", includeMature = includeMature)
     }
 
-    suspend fun getRecommended(): Result<List<AniListMedia>> = safeCall {
-        fetchList(sort = "FAVOURITES_DESC")
+    suspend fun getRecommended(includeMature: Boolean = false): Result<List<AniListMedia>> = safeCall {
+        fetchList(sort = "FAVOURITES_DESC", includeMature = includeMature)
     }
 
     /** Browse the catalog by genre/season/year for the Discover tab, sorted by popularity. */
@@ -199,7 +204,8 @@ class AniListRepository {
         genre: String?,
         season: String?,
         seasonYear: Int?,
-        page: Int = 1
+        page: Int = 1,
+        includeMature: Boolean = false
     ): Result<List<AniListMedia>> = safeCall {
         val response = AniListApi.service.searchMedia(
             AniListRequest(
@@ -210,7 +216,8 @@ class AniListRepository {
                     "seasonYear" to seasonYear,
                     "sort" to listOf("POPULARITY_DESC"),
                     "perPage" to 30,
-                    "page" to page
+                    "page" to page,
+                    "isAdult" to if (includeMature) null else false
                 )
             )
         )
@@ -261,7 +268,8 @@ class AniListRepository {
     private suspend fun fetchList(
         sort: String,
         season: String? = null,
-        seasonYear: Int? = null
+        seasonYear: Int? = null,
+        includeMature: Boolean = false
     ): List<AniListMedia> {
         val response = AniListApi.service.searchMedia(
             AniListRequest(
@@ -270,7 +278,8 @@ class AniListRepository {
                     "sort" to listOf(sort),
                     "season" to season,
                     "seasonYear" to seasonYear,
-                    "perPage" to 10
+                    "perPage" to 10,
+                    "isAdult" to if (includeMature) null else false
                 )
             )
         )
