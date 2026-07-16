@@ -776,6 +776,34 @@ private fun AboutTab() {
 
     Spacer(modifier = Modifier.height(20.dp))
 
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Developer",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 10.dp)
+            )
+            DevCreditRow(
+                icon = Icons.Filled.Person,
+                name = "JROC",
+                role = "Developer"
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            DevCreditRow(
+                icon = Icons.Filled.AutoAwesome,
+                name = "Claude",
+                role = "AI coding assistant by Anthropic"
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(20.dp))
+
     OutlinedButton(
         onClick = {
             val sendIntent = Intent(Intent.ACTION_SEND).apply {
@@ -792,6 +820,39 @@ private fun AboutTab() {
         Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(8.dp))
         Text("Share Vizora")
+    }
+}
+
+@Composable
+private fun DevCreditRow(icon: ImageVector, name: String, role: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = role,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
