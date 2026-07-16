@@ -1124,24 +1124,39 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             _isSearchingCharacters.value = false
             return
         }
-        // Jikan's public rate limit is tight (~3 req/sec, 60/min). Waiting
-        // for at least 2 characters and debouncing a bit longer than the
-        // AniList search cuts down how often keystrokes actually fire a
-        // request, which is what was tripping frequent "can't reach
-        // MyAnimeList" failures during normal typing.
-        if (query.trim().length < 2) {
+        // MyAnimeList itself only processes queries of 3+ letters (shorter
+        // queries are rejected server-side), and Jikan's public rate limit
+        // is tight (~3 req/sec, 60/min) on top of that. Requiring 3
+        // characters and debouncing longer than the AniList search cuts
+        // down how often keystrokes actually fire a request, which is what
+        // was tripping frequent "can't reach MyAnimeList" failures during
+        // normal typing.
+        if (query.trim().length < 3) {
             _characterSearchResults.value = emptyList()
             _characterSearchError.value = null
             _isSearchingCharacters.value = false
             return
         }
         characterSearchJob = viewModelScope.launch {
-            delay(600)
+            delay(700)
             _isSearchingCharacters.value = true
             _characterSearchError.value = null
-            jikanRepository.searchCharacters(query)
+            // One extra attempt after a short pause: Jikan sits in front of
+            // MyAnimeList and occasionally drops a request (momentary 5xx,
+            // timeout, etc.) even when the connection itself is fine, so a
+            // single retry clears most of what would otherwise show up to
+            // the user as a false "can't reach MyAnimeList" error.
+            var result = jikanRepository.searchCharacters(query)
+            if (result.isFailure) {
+                delay(800)
+                result = jikanRepository.searchCharacters(query)
+            }
+            result
                 .onSuccess { _characterSearchResults.value = it }
-                .onFailure { _characterSearchError.value = "Couldn't reach MyAnimeList. Check your connection." }
+                .onFailure {
+                    _characterSearchError.value =
+                        "Couldn't reach MyAnimeList. It may be temporarily rate-limited — try again in a moment."
+                }
             _isSearchingCharacters.value = false
         }
     }
