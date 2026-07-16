@@ -22,6 +22,7 @@ import com.example.animetracker.data.ThemePrefs
 import com.example.animetracker.data.PersonalityPrefs
 import com.example.animetracker.data.ContentFilterPrefs
 import com.example.animetracker.data.FactionPrefs
+import com.example.animetracker.data.AppSettingsPrefs
 import com.example.animetracker.ui.model.Faction
 import com.example.animetracker.ui.theme.AppThemeOption
 import com.example.animetracker.data.network.AniListAiringSchedule
@@ -77,6 +78,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val personalityPrefs = PersonalityPrefs(application)
     private val contentFilterPrefs = ContentFilterPrefs(application)
     private val factionPrefs = FactionPrefs(application)
+    private val appSettingsPrefs = AppSettingsPrefs(application)
     private val lightNovelFolderPrefs = LightNovelFolderPrefs(application)
 
     private val _themeOption = MutableStateFlow(themePrefs.getTheme())
@@ -503,6 +505,76 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     fun setFaction(faction: Faction) {
         factionPrefs.setFaction(faction)
         _faction.value = faction
+    }
+
+    // --- Notification toggles ---
+
+    private val _episodeReminders = MutableStateFlow(appSettingsPrefs.getEpisodeReminders())
+    val episodeReminders: StateFlow<Boolean> = _episodeReminders.asStateFlow()
+
+    fun setEpisodeReminders(enabled: Boolean) {
+        appSettingsPrefs.setEpisodeReminders(enabled)
+        _episodeReminders.value = enabled
+    }
+
+    private val _newSeasonAlerts = MutableStateFlow(appSettingsPrefs.getNewSeasonAlerts())
+    val newSeasonAlerts: StateFlow<Boolean> = _newSeasonAlerts.asStateFlow()
+
+    fun setNewSeasonAlerts(enabled: Boolean) {
+        appSettingsPrefs.setNewSeasonAlerts(enabled)
+        _newSeasonAlerts.value = enabled
+    }
+
+    private val _aiPickNudges = MutableStateFlow(appSettingsPrefs.getAiPickNudges())
+    val aiPickNudges: StateFlow<Boolean> = _aiPickNudges.asStateFlow()
+
+    fun setAiPickNudges(enabled: Boolean) {
+        appSettingsPrefs.setAiPickNudges(enabled)
+        _aiPickNudges.value = enabled
+    }
+
+    // --- App behavior toggles ---
+
+    private val _reduceMotion = MutableStateFlow(appSettingsPrefs.getReduceMotion())
+    val reduceMotion: StateFlow<Boolean> = _reduceMotion.asStateFlow()
+
+    fun setReduceMotion(enabled: Boolean) {
+        appSettingsPrefs.setReduceMotion(enabled)
+        _reduceMotion.value = enabled
+    }
+
+    private val _hapticFeedback = MutableStateFlow(appSettingsPrefs.getHapticFeedback())
+    val hapticFeedback: StateFlow<Boolean> = _hapticFeedback.asStateFlow()
+
+    fun setHapticFeedback(enabled: Boolean) {
+        appSettingsPrefs.setHapticFeedback(enabled)
+        _hapticFeedback.value = enabled
+    }
+
+    private val _dataSaver = MutableStateFlow(appSettingsPrefs.getDataSaver())
+    val dataSaver: StateFlow<Boolean> = _dataSaver.asStateFlow()
+
+    fun setDataSaver(enabled: Boolean) {
+        appSettingsPrefs.setDataSaver(enabled)
+        _dataSaver.value = enabled
+    }
+
+    // --- Data & storage actions ---
+
+    /** Wipes every locally tracked anime entry. Manga/light novels/chat are untouched. */
+    fun clearWatchlist() {
+        viewModelScope.launch { repository.deleteAll() }
+    }
+
+    /** Wipes anime, manga, light novels, and AI chat history in one go. */
+    fun clearAllLocalData() {
+        viewModelScope.launch {
+            repository.deleteAll()
+            mangaRepository.removeAll()
+            lightNovelRepository.removeAll()
+            chatRepository.clearAll()
+        }
+        _chatError.value = null
     }
 
     fun onSearchQueryChange(query: String) {
