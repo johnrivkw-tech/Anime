@@ -111,6 +111,22 @@ private val CHARACTERS_QUERY = """
     }
 """.trimIndent()
 
+// Used by the Profile screen's "Favorite Characters" picker — searches
+// AniList's own character database directly instead of going through
+// MyAnimeList/Jikan, which was unreliable (aggressive rate-limiting and
+// frequent transient failures).
+private val CHARACTER_SEARCH_QUERY = """
+    query(${'$'}search: String, ${'$'}perPage: Int) {
+      Page(perPage: ${'$'}perPage) {
+        characters(search: ${'$'}search, sort: [SEARCH_MATCH]) {
+          id
+          name { full }
+          image { large }
+        }
+      }
+    }
+""".trimIndent()
+
 // Uses a leaner field set than MEDIA_FIELDS (no trailer/description/banner)
 // since the Schedule screen only ever renders a poster thumbnail + title.
 private val AIRING_SCHEDULE_QUERY = """
@@ -239,6 +255,18 @@ class AniListRepository {
         )
         checkErrors(response.errors)
         response.data?.Media?.characters?.edges ?: emptyList()
+    }
+
+    /** Free-text character search backing the Profile screen's Favorite Characters picker. */
+    suspend fun searchCharacters(query: String): Result<List<AniListCharacterNode>> = safeCall {
+        val response = AniListApi.service.searchCharacters(
+            AniListRequest(
+                query = CHARACTER_SEARCH_QUERY,
+                variables = mapOf("search" to query, "perPage" to 15)
+            )
+        )
+        checkErrors(response.errors)
+        response.data?.Page?.characters ?: emptyList()
     }
 
     /**
