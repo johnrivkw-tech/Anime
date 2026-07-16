@@ -12,4 +12,8 @@ class LightNovelRepository(private val dao: LightNovelDao) {
     suspend fun removeNovel(novel: LightNovelEntity) {
         dao.delete(novel)
     }
+
+    suspend fun removeAll() {
+        dao.deleteAll()
+    }
 }
