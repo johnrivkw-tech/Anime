@@ -17,6 +17,7 @@ import com.example.animetracker.data.LightNovelRepository
 import com.example.animetracker.data.MangaEntity
 import com.example.animetracker.data.MangaRepository
 import com.example.animetracker.data.ProfilePrefs
+import com.example.animetracker.data.FavoritesPrefs
 import com.example.animetracker.data.ThemePrefs
 import com.example.animetracker.data.FactionPrefs
 import com.example.animetracker.ui.model.Faction
@@ -27,10 +28,15 @@ import com.example.animetracker.data.network.AniListMedia
 import com.example.animetracker.data.network.AniListRepository
 import com.example.animetracker.data.network.GeminiChatRepository
 import com.example.animetracker.data.network.GeminiRepository
+import com.example.animetracker.data.network.JikanCharacter
+import com.example.animetracker.data.network.JikanRepository
 import com.example.animetracker.data.network.MangaDexChapter
 import com.example.animetracker.data.network.MangaDexManga
 import com.example.animetracker.data.network.MangaDexRepository
 import com.example.animetracker.ui.model.ChatMessage
+import com.example.animetracker.ui.model.FavoriteAnimePick
+import com.example.animetracker.ui.model.FavoriteCharacterPick
+import com.example.animetracker.ui.model.MAX_FAVORITE_PICKS
 import com.example.animetracker.ui.model.FolderPdf
 import com.example.animetracker.ui.model.GenreCount
 import com.example.animetracker.ui.model.HomeCardItem
@@ -61,10 +67,12 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private lateinit var lightNovelRepository: LightNovelRepository
     private lateinit var mangaRepository: MangaRepository
     private val aniListRepository = AniListRepository()
+    private val jikanRepository = JikanRepository()
     private val mangaDexRepository = MangaDexRepository()
     private val geminiRepository = GeminiRepository()
     private val geminiChatRepository = GeminiChatRepository()
     private val profilePrefs = ProfilePrefs(application)
+    private val favoritesPrefs = FavoritesPrefs(application)
     private val themePrefs = ThemePrefs(application)
     private val factionPrefs = FactionPrefs(application)
     private val lightNovelFolderPrefs = LightNovelFolderPrefs(application)
@@ -216,6 +224,29 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     val isAvatarSaving: StateFlow<Boolean> = _isAvatarSaving.asStateFlow()
 
     val profileJoinedAtMillis: Long = profilePrefs.getJoinedAtMillis()
+
+    // --- Profile: curated "Favorite Anime" / "Favorite Characters" shelves (max 10 each) ---
+    private val _favoriteAnimePicks = MutableStateFlow(favoritesPrefs.getFavoriteAnime())
+    val favoriteAnimePicks: StateFlow<List<FavoriteAnimePick>> = _favoriteAnimePicks.asStateFlow()
+
+    private val _favoriteCharacterPicks = MutableStateFlow(favoritesPrefs.getFavoriteCharacters())
+    val favoriteCharacterPicks: StateFlow<List<FavoriteCharacterPick>> = _favoriteCharacterPicks.asStateFlow()
+
+    // Picker dialog for adding to the Favorite Characters shelf (global
+    // AniList character search, separate from the per-anime cast list).
+    private val _characterSearchQuery = MutableStateFlow("")
+    val characterSearchQuery: StateFlow<String> = _characterSearchQuery.asStateFlow()
+
+    private val _characterSearchResults = MutableStateFlow<List<JikanCharacter>>(emptyList())
+    val characterSearchResults: StateFlow<List<JikanCharacter>> = _characterSearchResults.asStateFlow()
+
+    private val _isSearchingCharacters = MutableStateFlow(false)
+    val isSearchingCharacters: StateFlow<Boolean> = _isSearchingCharacters.asStateFlow()
+
+    private val _characterSearchError = MutableStateFlow<String?>(null)
+    val characterSearchError: StateFlow<String?> = _characterSearchError.asStateFlow()
+
+    private var characterSearchJob: Job? = null
 
     // --- Profile: aggregate watchlist stats (local) ---
     val profileStats: StateFlow<ProfileStats>
@@ -988,5 +1019,79 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             }
             _isAvatarSaving.value = false
         }
+    }
+
+    // --- Profile: curated "Favorite Anime" shelf (max 10, user-picked) ---
+
+    /** True once 10 picks are saved — the picker UI should hide its "Add" tile at that point. */
+    fun isFavoriteAnimeShelfFull(): Boolean = _favoriteAnimePicks.value.size >= MAX_FAVORITE_PICKS
+
+    fun addFavoriteAnimePick(media: AniListMedia) {
+        val current = _favoriteAnimePicks.value
+        if (current.size >= MAX_FAVORITE_PICKS || current.any { it.aniListId == media.id }) return
+        val updated = current + FavoriteAnimePick(
+            aniListId = media.id,
+            title = media.displayTitle,
+            imageUrl = media.posterUrl
+        )
+        _favoriteAnimePicks.value = updated
+        favoritesPrefs.setFavoriteAnime(updated)
+    }
+
+    fun removeFavoriteAnimePick(aniListId: Int) {
+        val updated = _favoriteAnimePicks.value.filterNot { it.aniListId == aniListId }
+        _favoriteAnimePicks.value = updated
+        favoritesPrefs.setFavoriteAnime(updated)
+    }
+
+    // --- Profile: curated "Favorite Characters" shelf (max 10, user-picked) ---
+
+    fun isFavoriteCharacterShelfFull(): Boolean = _favoriteCharacterPicks.value.size >= MAX_FAVORITE_PICKS
+
+    fun addFavoriteCharacterPick(character: JikanCharacter) {
+        val current = _favoriteCharacterPicks.value
+        if (current.size >= MAX_FAVORITE_PICKS || current.any { it.characterId == character.malId }) return
+        val updated = current + FavoriteCharacterPick(
+            characterId = character.malId,
+            name = character.displayName,
+            imageUrl = character.imageUrl
+        )
+        _favoriteCharacterPicks.value = updated
+        favoritesPrefs.setFavoriteCharacters(updated)
+    }
+
+    fun removeFavoriteCharacterPick(characterId: Int) {
+        val updated = _favoriteCharacterPicks.value.filterNot { it.characterId == characterId }
+        _favoriteCharacterPicks.value = updated
+        favoritesPrefs.setFavoriteCharacters(updated)
+    }
+
+    /** Debounced MyAnimeList character search (via Jikan), backing the Favorite Characters picker dialog. */
+    fun searchCharactersOnline(query: String) {
+        characterSearchJob?.cancel()
+        _characterSearchQuery.value = query
+        if (query.isBlank()) {
+            _characterSearchResults.value = emptyList()
+            _characterSearchError.value = null
+            _isSearchingCharacters.value = false
+            return
+        }
+        characterSearchJob = viewModelScope.launch {
+            delay(400)
+            _isSearchingCharacters.value = true
+            _characterSearchError.value = null
+            jikanRepository.searchCharacters(query)
+                .onSuccess { _characterSearchResults.value = it }
+                .onFailure { _characterSearchError.value = "Couldn't reach MyAnimeList. Check your connection." }
+            _isSearchingCharacters.value = false
+        }
+    }
+
+    fun clearCharacterSearchResults() {
+        characterSearchJob?.cancel()
+        _characterSearchQuery.value = ""
+        _characterSearchResults.value = emptyList()
+        _characterSearchError.value = null
+        _isSearchingCharacters.value = false
     }
 }
