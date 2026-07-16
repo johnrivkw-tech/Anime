@@ -20,13 +20,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.List
@@ -61,11 +65,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.animetracker.ui.components.AnimeSectionRow
 import com.example.animetracker.ui.model.Faction
+import com.example.animetracker.ui.model.FavoriteAnimePick
+import com.example.animetracker.ui.model.FavoriteCharacterPick
 import com.example.animetracker.ui.model.GenreCount
+import com.example.animetracker.ui.model.MAX_FAVORITE_PICKS
 import com.example.animetracker.ui.model.ProfileStats
 import com.example.animetracker.ui.model.RankTier
 import com.example.animetracker.ui.model.currentRank
@@ -91,6 +99,22 @@ fun ProfileScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}) {
     val stats by viewModel.profileStats.collectAsState()
     val favorites by viewModel.favoriteAnime.collectAsState()
     val faction by viewModel.faction.collectAsState()
+
+    val favoriteAnimePicks by viewModel.favoriteAnimePicks.collectAsState()
+    val favoriteCharacterPicks by viewModel.favoriteCharacterPicks.collectAsState()
+
+    val animeSearchQuery by viewModel.searchQuery.collectAsState()
+    val animeSearchResults by viewModel.searchResults.collectAsState()
+    val isSearchingAnime by viewModel.isSearchingApi.collectAsState()
+    val animeSearchError by viewModel.searchApiError.collectAsState()
+
+    val characterSearchQuery by viewModel.characterSearchQuery.collectAsState()
+    val characterSearchResults by viewModel.characterSearchResults.collectAsState()
+    val isSearchingCharacters by viewModel.isSearchingCharacters.collectAsState()
+    val characterSearchError by viewModel.characterSearchError.collectAsState()
+
+    var showAnimePicker by rememberSaveable { mutableStateOf(false) }
+    var showCharacterPicker by rememberSaveable { mutableStateOf(false) }
 
     val bannerPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -180,7 +204,260 @@ fun ProfileScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}) {
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+                SectionLabel("My Favorites")
+                Spacer(modifier = Modifier.height(12.dp))
+                FavoriteAnimeShelf(
+                    picks = favoriteAnimePicks,
+                    onAddClick = { showAnimePicker = true },
+                    onRemove = { viewModel.removeFavoriteAnimePick(it) },
+                    onItemClick = onAnimeClick,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                FavoriteCharacterShelf(
+                    picks = favoriteCharacterPicks,
+                    onAddClick = { showCharacterPicker = true },
+                    onRemove = { viewModel.removeFavoriteCharacterPick(it) },
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
         }
+    }
+
+    if (showAnimePicker) {
+        FavoriteAnimePickerDialog(
+            query = animeSearchQuery,
+            onQueryChange = { viewModel.searchOnline(it) },
+            results = animeSearchResults,
+            isLoading = isSearchingAnime,
+            error = animeSearchError,
+            alreadyPickedIds = favoriteAnimePicks.map { it.aniListId }.toSet(),
+            onDismiss = {
+                showAnimePicker = false
+                viewModel.clearSearchResults()
+            },
+            onSelect = { media ->
+                viewModel.addFavoriteAnimePick(media)
+                if (viewModel.isFavoriteAnimeShelfFull()) {
+                    showAnimePicker = false
+                    viewModel.clearSearchResults()
+                }
+            }
+        )
+    }
+
+    if (showCharacterPicker) {
+        FavoriteCharacterPickerDialog(
+            query = characterSearchQuery,
+            onQueryChange = { viewModel.searchCharactersOnline(it) },
+            results = characterSearchResults,
+            isLoading = isSearchingCharacters,
+            error = characterSearchError,
+            alreadyPickedIds = favoriteCharacterPicks.map { it.characterId }.toSet(),
+            onDismiss = {
+                showCharacterPicker = false
+                viewModel.clearCharacterSearchResults()
+            },
+            onSelect = { character ->
+                viewModel.addFavoriteCharacterPick(character)
+                if (viewModel.isFavoriteCharacterShelfFull()) {
+                    showCharacterPicker = false
+                    viewModel.clearCharacterSearchResults()
+                }
+            }
+        )
+    }
+}
+
+/**
+ * Curated "Favorite Anime" shelf (max [MAX_FAVORITE_PICKS]) at the bottom of
+ * the Profile screen. Distinct from the "Favorites" row further up, which
+ * just reflects [com.example.animetracker.data.Anime.isFavorite] on tracked
+ * titles — this one is a deliberate top-10 list of any AniList title.
+ */
+@Composable
+private fun FavoriteAnimeShelf(
+    picks: List<FavoriteAnimePick>,
+    onAddClick: () -> Unit,
+    onRemove: (Int) -> Unit,
+    onItemClick: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = "Favorite Anime (${picks.size}/$MAX_FAVORITE_PICKS)",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(picks, key = { it.aniListId }) { pick ->
+                FavoritePosterTile(
+                    imageUrl = pick.imageUrl,
+                    label = pick.title,
+                    onClick = { onItemClick(pick.aniListId) },
+                    onRemove = { onRemove(pick.aniListId) }
+                )
+            }
+            if (picks.size < MAX_FAVORITE_PICKS) {
+                item(key = "add_anime") {
+                    AddTile(label = "Add anime", onClick = onAddClick)
+                }
+            }
+        }
+    }
+}
+
+/** Curated "Favorite Characters" shelf (max [MAX_FAVORITE_PICKS]), same idea as [FavoriteAnimeShelf]. */
+@Composable
+private fun FavoriteCharacterShelf(
+    picks: List<FavoriteCharacterPick>,
+    onAddClick: () -> Unit,
+    onRemove: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = "Favorite Characters (${picks.size}/$MAX_FAVORITE_PICKS)",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(picks, key = { it.characterId }) { pick ->
+                FavoriteCircleTile(
+                    imageUrl = pick.imageUrl,
+                    label = pick.name,
+                    onRemove = { onRemove(pick.characterId) }
+                )
+            }
+            if (picks.size < MAX_FAVORITE_PICKS) {
+                item(key = "add_character") {
+                    AddTile(label = "Add character", shape = CircleShape, onClick = onAddClick)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FavoritePosterTile(
+    imageUrl: String?,
+    label: String,
+    onClick: () -> Unit,
+    onRemove: () -> Unit
+) {
+    Column(modifier = Modifier.width(96.dp)) {
+        Box {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = label,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(width = 96.dp, height = 136.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable(onClick = onClick)
+            )
+            RemoveBadge(onRemove = onRemove, modifier = Modifier.align(Alignment.TopEnd))
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun FavoriteCircleTile(
+    imageUrl: String?,
+    label: String,
+    onRemove: () -> Unit
+) {
+    Column(
+        modifier = Modifier.width(84.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = label,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+            )
+            RemoveBadge(onRemove = onRemove, modifier = Modifier.align(Alignment.TopEnd))
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun RemoveBadge(onRemove: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier
+            .padding(4.dp)
+            .size(22.dp)
+            .clip(CircleShape),
+        color = Color.Black.copy(alpha = 0.6f)
+    ) {
+        IconButton(onClick = onRemove, modifier = Modifier.size(22.dp)) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = "Remove from favorites",
+                tint = Color.White,
+                modifier = Modifier.size(14.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun AddTile(
+    label: String,
+    onClick: () -> Unit,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(10.dp)
+) {
+    val size = if (shape == CircleShape) 72.dp else 96.dp
+    Column(
+        modifier = Modifier.width(if (shape == CircleShape) 84.dp else 96.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = if (shape == CircleShape) size else 96.dp, height = if (shape == CircleShape) size else 136.dp)
+                .clip(shape)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), shape)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = label,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
