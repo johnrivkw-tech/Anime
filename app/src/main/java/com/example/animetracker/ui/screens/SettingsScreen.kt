@@ -1,5 +1,6 @@
 package com.example.animetracker.ui.screens
 
+import android.content.Intent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -10,6 +11,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,12 +33,23 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,6 +62,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -64,13 +79,26 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.example.animetracker.BuildConfig
+import com.example.animetracker.ui.components.VizoraWordmark
+import com.example.animetracker.ui.model.currentRank
 import com.example.animetracker.ui.theme.AppThemeOption
 import com.example.animetracker.viewmodel.AnimeViewModel
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import androidx.compose.ui.unit.sp
 
 /** The settings sections shown as rows in the main menu list. */
 private enum class SettingsSection(
@@ -80,7 +108,11 @@ private enum class SettingsSection(
 ) {
     APPEARANCE("Appearance", "Theme and accent color", Icons.Filled.Palette),
     CONTENT_FILTERS("Content Filters", "Age and mature content", Icons.Filled.Shield),
-    AI_PERSONALITY("AI Personality", "Customize how the AI talks to you", Icons.Filled.SmartToy)
+    NOTIFICATIONS("Notifications", "Reminders and alerts", Icons.Filled.NotificationsActive),
+    BEHAVIOR("Playback & Behavior", "Motion, haptics, data usage", Icons.Filled.Tune),
+    AI_PERSONALITY("AI Personality", "Customize how the AI talks to you", Icons.Filled.SmartToy),
+    DATA_STORAGE("Data & Storage", "Library stats and reset options", Icons.Filled.Storage),
+    ABOUT("About Vizora", "Version, credits, and sharing", Icons.Filled.Info)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,6 +120,7 @@ private enum class SettingsSection(
 fun SettingsScreen(viewModel: AnimeViewModel) {
     // null = showing the main settings menu list; otherwise the open section.
     var activeSection by rememberSaveable { mutableStateOf<SettingsSection?>(null) }
+    val reduceMotion by viewModel.reduceMotion.collectAsState()
 
     Scaffold(
         topBar = {
@@ -106,7 +139,9 @@ fun SettingsScreen(viewModel: AnimeViewModel) {
         AnimatedContent(
             targetState = activeSection,
             transitionSpec = {
-                if (targetState != null) {
+                if (reduceMotion) {
+                    fadeIn(tween(120)) togetherWith fadeOut(tween(120))
+                } else if (targetState != null) {
                     (slideInHorizontally(tween(220)) { it / 4 } + fadeIn(tween(220))) togetherWith
                         fadeOut(tween(150))
                 } else {
@@ -120,7 +155,7 @@ fun SettingsScreen(viewModel: AnimeViewModel) {
                 .padding(padding)
         ) { section ->
             if (section == null) {
-                SettingsMenuList(onSectionSelected = { activeSection = it })
+                SettingsMenuList(viewModel = viewModel, onSectionSelected = { activeSection = it })
             } else {
                 Column(
                     modifier = Modifier
@@ -131,7 +166,11 @@ fun SettingsScreen(viewModel: AnimeViewModel) {
                     when (section) {
                         SettingsSection.APPEARANCE -> AppearanceTab(viewModel)
                         SettingsSection.CONTENT_FILTERS -> ContentFiltersTab(viewModel)
+                        SettingsSection.NOTIFICATIONS -> NotificationsTab(viewModel)
+                        SettingsSection.BEHAVIOR -> BehaviorTab(viewModel)
                         SettingsSection.AI_PERSONALITY -> AiPersonalityTab(viewModel)
+                        SettingsSection.DATA_STORAGE -> DataStorageTab(viewModel)
+                        SettingsSection.ABOUT -> AboutTab()
                     }
                 }
             }
@@ -140,34 +179,154 @@ fun SettingsScreen(viewModel: AnimeViewModel) {
 }
 
 @Composable
-private fun SettingsMenuList(onSectionSelected: (SettingsSection) -> Unit) {
+private fun SettingsMenuList(viewModel: AnimeViewModel, onSectionSelected: (SettingsSection) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column {
-                SettingsSection.entries.forEachIndexed { index, section ->
-                    SettingsMenuRow(section = section, onClick = { onSectionSelected(section) })
-                    if (index != SettingsSection.entries.lastIndex) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(1.dp)
-                                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                        )
-                    }
+        ProfileHeaderCard(viewModel)
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "Preferences",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+        )
+        SettingsGroupCard(
+            sections = listOf(
+                SettingsSection.APPEARANCE,
+                SettingsSection.CONTENT_FILTERS,
+                SettingsSection.NOTIFICATIONS,
+                SettingsSection.BEHAVIOR,
+                SettingsSection.AI_PERSONALITY
+            ),
+            onSectionSelected = onSectionSelected
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "App",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+        )
+        SettingsGroupCard(
+            sections = listOf(SettingsSection.DATA_STORAGE, SettingsSection.ABOUT),
+            onSectionSelected = onSectionSelected
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun SettingsGroupCard(
+    sections: List<SettingsSection>,
+    onSectionSelected: (SettingsSection) -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column {
+            sections.forEachIndexed { index, section ->
+                SettingsMenuRow(section = section, onClick = { onSectionSelected(section) })
+                if (index != sections.lastIndex) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                    )
                 }
             }
         }
     }
 }
+
+/** Small card up top summarizing who's using the app: avatar, name, faction rank, join date. */
+@Composable
+private fun ProfileHeaderCard(viewModel: AnimeViewModel) {
+    val avatarPath by viewModel.profileAvatarPath.collectAsState()
+    val displayName by viewModel.profileDisplayName.collectAsState()
+    val faction by viewModel.faction.collectAsState()
+    val stats by viewModel.profileStats.collectAsState()
+    val rankTitle = currentRank(faction, stats.completed)?.title ?: "Unranked"
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (avatarPath != null) {
+                    AsyncImage(
+                        model = File(avatarPath!!),
+                        contentDescription = "Your avatar",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.Person,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 14.dp)
+            ) {
+                Text(
+                    text = displayName.ifBlank { "Anime Fan" },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "$rankTitle · ${faction.displayName}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "Member since ${formatJoinedDate(viewModel.profileJoinedAtMillis)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+private fun formatJoinedDate(millis: Long): String =
+    SimpleDateFormat("MMMM yyyy", Locale.US).format(Date(millis))
 
 @Composable
 private fun SettingsMenuRow(section: SettingsSection, onClick: () -> Unit) {
@@ -264,6 +423,133 @@ private fun ContentFiltersTab(viewModel: AnimeViewModel) {
 }
 
 @Composable
+private fun NotificationsTab(viewModel: AnimeViewModel) {
+    val episodeReminders by viewModel.episodeReminders.collectAsState()
+    val newSeasonAlerts by viewModel.newSeasonAlerts.collectAsState()
+    val aiPickNudges by viewModel.aiPickNudges.collectAsState()
+
+    Text(
+        text = "Stay in the loop",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold
+    )
+    Text(
+        text = "Choose what Vizora should let you know about. You can change these any time.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+    )
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column {
+            SettingsSwitchRow(
+                viewModel = viewModel,
+                title = "New Episode Reminders",
+                subtitle = "Get a nudge when a show you're watching drops a new episode.",
+                checked = episodeReminders,
+                onCheckedChange = { viewModel.setEpisodeReminders(it) }
+            )
+            SettingsDivider()
+            SettingsSwitchRow(
+                viewModel = viewModel,
+                title = "New Season Alerts",
+                subtitle = "Hear about it when something on your list gets a new season.",
+                checked = newSeasonAlerts,
+                onCheckedChange = { viewModel.setNewSeasonAlerts(it) }
+            )
+            SettingsDivider()
+            SettingsSwitchRow(
+                viewModel = viewModel,
+                title = "AI Pick Nudges",
+                subtitle = "Occasional AI-picked recommendations based on your taste.",
+                checked = aiPickNudges,
+                onCheckedChange = { viewModel.setAiPickNudges(it) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun BehaviorTab(viewModel: AnimeViewModel) {
+    val reduceMotion by viewModel.reduceMotion.collectAsState()
+    val hapticFeedback by viewModel.hapticFeedback.collectAsState()
+    val dataSaver by viewModel.dataSaver.collectAsState()
+
+    Text(
+        text = "Playback & Behavior",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold
+    )
+    Text(
+        text = "Fine-tune how Vizora feels to use.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+    )
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column {
+            SettingsSwitchRow(
+                viewModel = viewModel,
+                title = "Reduce Motion",
+                subtitle = "Use simpler, faster transitions across the app.",
+                checked = reduceMotion,
+                onCheckedChange = { viewModel.setReduceMotion(it) }
+            )
+            SettingsDivider()
+            SettingsSwitchRow(
+                viewModel = viewModel,
+                title = "Haptic Feedback",
+                subtitle = "Feel a light tap when you flip a switch in Settings.",
+                checked = hapticFeedback,
+                onCheckedChange = { viewModel.setHapticFeedback(it) }
+            )
+            SettingsDivider()
+            SettingsSwitchRow(
+                viewModel = viewModel,
+                title = "Data Saver",
+                subtitle = "Favor lower-resolution artwork when loading covers and banners.",
+                checked = dataSaver,
+                onCheckedChange = { viewModel.setDataSaver(it) }
+            )
+        }
+    }
+}
+
+private data class PersonalityPreset(val label: String, val prompt: String)
+
+private val personalityPresets = listOf(
+    PersonalityPreset(
+        "Hype Hero",
+        "You're a hype, energetic anime buddy who treats every recommendation like the " +
+            "cold open of something legendary. Big enthusiasm, but always useful and specific."
+    ),
+    PersonalityPreset(
+        "Chill Senpai",
+        "You're a laid-back, big-sibling type. Calm, thoughtful recommendations with a bit " +
+            "of dry humor. Never pushy."
+    ),
+    PersonalityPreset(
+        "Blunt Critic",
+        "You give short, honest, no-fluff opinions. If something is mid, say so. Prioritize " +
+            "accuracy and taste over hype."
+    ),
+    PersonalityPreset(
+        "Walking Encyclopedia",
+        "You're a walking anime encyclopedia. Prioritize lore, studio trivia, and historical " +
+            "context alongside your recommendations."
+    )
+)
+
+@Composable
 private fun AiPersonalityTab(viewModel: AnimeViewModel) {
     val savedPersonality by viewModel.aiPersonality.collectAsState()
     var draft by remember { mutableStateOf(savedPersonality) }
@@ -283,8 +569,36 @@ private fun AiPersonalityTab(viewModel: AnimeViewModel) {
             "its tone, personality, and style. This applies to AI Picks and AI chat.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
     )
+
+    Text(
+        text = "Quick presets",
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(bottom = 8.dp)
+    )
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(bottom = 16.dp)
+    ) {
+        personalityPresets.forEach { preset ->
+            AssistChip(
+                onClick = { draft = preset.prompt },
+                label = { Text(preset.label) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.AutoAwesome,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            )
+        }
+    }
 
     OutlinedTextField(
         value = draft,
@@ -309,6 +623,277 @@ private fun AiPersonalityTab(viewModel: AnimeViewModel) {
         ) {
             Text("Reset to default")
         }
+    }
+}
+
+@Composable
+private fun DataStorageTab(viewModel: AnimeViewModel) {
+    val stats by viewModel.profileStats.collectAsState()
+
+    var showClearWatchlistConfirm by remember { mutableStateOf(false) }
+    var showClearChatConfirm by remember { mutableStateOf(false) }
+    var showEraseAllConfirm by remember { mutableStateOf(false) }
+
+    Text(
+        text = "Your library",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold
+    )
+    Text(
+        text = "A quick snapshot of what's stored on this device.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+    )
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(vertical = 4.dp)) {
+            StatRow(label = "Anime tracked", value = stats.totalAnime.toString())
+            SettingsDivider()
+            StatRow(label = "Manga tracked", value = stats.mangaCount.toString())
+            SettingsDivider()
+            StatRow(label = "Light novels tracked", value = stats.lightNovelCount.toString())
+            SettingsDivider()
+            StatRow(label = "Episodes watched", value = stats.totalEpisodesWatched.toString())
+        }
+    }
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    Text(
+        text = "Reset options",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold
+    )
+    Text(
+        text = "These actions can't be undone, so we'll always ask you to confirm first.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+    )
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedButton(
+            onClick = { showClearWatchlistConfirm = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Filled.DeleteSweep, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Clear Watchlist")
+        }
+        OutlinedButton(
+            onClick = { showClearChatConfirm = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Filled.DeleteSweep, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Clear AI Chat History")
+        }
+        Button(
+            onClick = { showEraseAllConfirm = true },
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Filled.DeleteSweep, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Erase All Local Data")
+        }
+    }
+
+    if (showClearWatchlistConfirm) {
+        ConfirmActionDialog(
+            title = "Clear watchlist?",
+            message = "This removes every anime you're tracking. Manga, light novels, and chat history are untouched.",
+            confirmLabel = "Clear",
+            onConfirm = { viewModel.clearWatchlist() },
+            onDismiss = { showClearWatchlistConfirm = false }
+        )
+    }
+    if (showClearChatConfirm) {
+        ConfirmActionDialog(
+            title = "Clear AI chat history?",
+            message = "This deletes your saved conversation with the AI. This can't be undone.",
+            confirmLabel = "Clear",
+            onConfirm = { viewModel.clearChat() },
+            onDismiss = { showClearChatConfirm = false }
+        )
+    }
+    if (showEraseAllConfirm) {
+        ConfirmActionDialog(
+            title = "Erase all local data?",
+            message = "This wipes your anime, manga, and light novel library plus AI chat history. " +
+                "Your theme, profile, and content filter settings are kept. This can't be undone.",
+            confirmLabel = "Erase everything",
+            onConfirm = { viewModel.clearAllLocalData() },
+            onDismiss = { showEraseAllConfirm = false }
+        )
+    }
+}
+
+@Composable
+private fun AboutTab() {
+    val context = LocalContext.current
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Spacer(modifier = Modifier.height(8.dp))
+        VizoraWordmark(fontSize = 30.sp, markSize = 30.dp)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Vizora is your all-in-one home for tracking anime, manga, and light novels, " +
+                    "with AI-assisted picks tailored to your taste.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "Anime and manga data powered by AniList and MangaDex. AI features powered by Gemini.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(20.dp))
+
+    OutlinedButton(
+        onClick = {
+            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(
+                    Intent.EXTRA_TEXT,
+                    "Check out Vizora — the app I use to track anime, manga, and light novels!"
+                )
+            }
+            context.startActivity(Intent.createChooser(sendIntent, "Share Vizora"))
+        },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("Share Vizora")
+    }
+}
+
+@Composable
+private fun ConfirmActionDialog(
+    title: String,
+    message: String,
+    confirmLabel: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, fontWeight = FontWeight.Bold) },
+        text = { Text(message) },
+        confirmButton = {
+            TextButton(onClick = {
+                onConfirm()
+                onDismiss()
+            }) {
+                Text(confirmLabel, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun StatRow(label: String, value: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@Composable
+private fun SettingsDivider() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+    )
+}
+
+/** A titled switch row with an optional haptic tick on toggle, reused across several tabs. */
+@Composable
+private fun SettingsSwitchRow(
+    viewModel: AnimeViewModel,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    val hapticsEnabled by viewModel.hapticFeedback.collectAsState()
+    val haptics = LocalHapticFeedback.current
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp)
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = {
+                if (hapticsEnabled) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                onCheckedChange(it)
+            },
+            colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
+        )
     }
 }
 
