@@ -30,8 +30,7 @@ import com.example.animetracker.data.network.AniListMedia
 import com.example.animetracker.data.network.AniListRepository
 import com.example.animetracker.data.network.GeminiChatRepository
 import com.example.animetracker.data.network.GeminiRepository
-import com.example.animetracker.data.network.JikanCharacter
-import com.example.animetracker.data.network.JikanRepository
+import com.example.animetracker.data.network.AniListCharacterNode
 import com.example.animetracker.data.network.MangaDexChapter
 import com.example.animetracker.data.network.MangaDexManga
 import com.example.animetracker.data.network.MangaDexRepository
@@ -69,7 +68,6 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private lateinit var lightNovelRepository: LightNovelRepository
     private lateinit var mangaRepository: MangaRepository
     private val aniListRepository = AniListRepository()
-    private val jikanRepository = JikanRepository()
     private val mangaDexRepository = MangaDexRepository()
     private val geminiRepository = GeminiRepository()
     private val geminiChatRepository = GeminiChatRepository()
@@ -271,8 +269,8 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _characterSearchQuery = MutableStateFlow("")
     val characterSearchQuery: StateFlow<String> = _characterSearchQuery.asStateFlow()
 
-    private val _characterSearchResults = MutableStateFlow<List<JikanCharacter>>(emptyList())
-    val characterSearchResults: StateFlow<List<JikanCharacter>> = _characterSearchResults.asStateFlow()
+    private val _characterSearchResults = MutableStateFlow<List<AniListCharacterNode>>(emptyList())
+    val characterSearchResults: StateFlow<List<AniListCharacterNode>> = _characterSearchResults.asStateFlow()
 
     private val _isSearchingCharacters = MutableStateFlow(false)
     val isSearchingCharacters: StateFlow<Boolean> = _isSearchingCharacters.asStateFlow()
@@ -1113,11 +1111,11 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun isFavoriteCharacterShelfFull(): Boolean = _favoriteCharacterPicks.value.size >= MAX_FAVORITE_PICKS
 
-    fun addFavoriteCharacterPick(character: JikanCharacter) {
+    fun addFavoriteCharacterPick(character: AniListCharacterNode) {
         val current = _favoriteCharacterPicks.value
-        if (current.size >= MAX_FAVORITE_PICKS || current.any { it.characterId == character.malId }) return
+        if (current.size >= MAX_FAVORITE_PICKS || current.any { it.characterId == character.id }) return
         val updated = current + FavoriteCharacterPick(
-            characterId = character.malId,
+            characterId = character.id,
             name = character.displayName,
             imageUrl = character.imageUrl
         )
@@ -1131,7 +1129,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         favoritesPrefs.setFavoriteCharacters(updated)
     }
 
-    /** Debounced MyAnimeList character search (via Jikan), backing the Favorite Characters picker dialog. */
+    /** Debounced AniList character search, backing the Favorite Characters picker dialog. */
     fun searchCharactersOnline(query: String) {
         characterSearchJob?.cancel()
         _characterSearchQuery.value = query
@@ -1141,38 +1139,14 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             _isSearchingCharacters.value = false
             return
         }
-        // MyAnimeList itself only processes queries of 3+ letters (shorter
-        // queries are rejected server-side), and Jikan's public rate limit
-        // is tight (~3 req/sec, 60/min) on top of that. Requiring 3
-        // characters and debouncing longer than the AniList search cuts
-        // down how often keystrokes actually fire a request, which is what
-        // was tripping frequent "can't reach MyAnimeList" failures during
-        // normal typing.
-        if (query.trim().length < 3) {
-            _characterSearchResults.value = emptyList()
-            _characterSearchError.value = null
-            _isSearchingCharacters.value = false
-            return
-        }
         characterSearchJob = viewModelScope.launch {
-            delay(700)
+            delay(400)
             _isSearchingCharacters.value = true
             _characterSearchError.value = null
-            // One extra attempt after a short pause: Jikan sits in front of
-            // MyAnimeList and occasionally drops a request (momentary 5xx,
-            // timeout, etc.) even when the connection itself is fine, so a
-            // single retry clears most of what would otherwise show up to
-            // the user as a false "can't reach MyAnimeList" error.
-            var result = jikanRepository.searchCharacters(query)
-            if (result.isFailure) {
-                delay(800)
-                result = jikanRepository.searchCharacters(query)
-            }
-            result
+            aniListRepository.searchCharacters(query)
                 .onSuccess { _characterSearchResults.value = it }
                 .onFailure {
-                    _characterSearchError.value =
-                        "Couldn't reach MyAnimeList. It may be temporarily rate-limited — try again in a moment."
+                    _characterSearchError.value = "Couldn't reach the character database. Check your connection."
                 }
             _isSearchingCharacters.value = false
         }
