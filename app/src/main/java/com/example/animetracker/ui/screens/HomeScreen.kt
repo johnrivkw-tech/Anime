@@ -294,11 +294,11 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                 }
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(9),
+                    columns = GridCells.Fixed(3),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 96.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(animeList, key = { it.id }) { anime ->
                         MyListPosterCard(
