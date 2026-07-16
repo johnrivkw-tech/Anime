@@ -18,4 +18,7 @@ interface MangaDao {
 
     @Delete
     suspend fun delete(manga: MangaEntity)
+
+    @Query("DELETE FROM manga_table")
+    suspend fun deleteAll()
 }
