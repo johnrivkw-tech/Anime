@@ -17,4 +17,7 @@ interface LightNovelDao {
 
     @Delete
     suspend fun delete(novel: LightNovelEntity)
+
+    @Query("DELETE FROM light_novel_table")
+    suspend fun deleteAll()
 }
