@@ -7,4 +7,5 @@ class MangaRepository(private val dao: MangaDao) {
 
     suspend fun addManga(manga: MangaEntity) = dao.insert(manga)
     suspend fun removeManga(manga: MangaEntity) = dao.delete(manga)
+    suspend fun removeAll() = dao.deleteAll()
 }
