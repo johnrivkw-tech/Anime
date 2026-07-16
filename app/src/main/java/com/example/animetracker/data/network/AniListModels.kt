@@ -73,6 +73,7 @@ data class AniListMedia(
     val coverImage: AniListCoverImage?,
     val bannerImage: String?,
     val genres: List<String> = emptyList(),
+    val isAdult: Boolean = false,
     val studios: AniListStudioConnection? = null,
     val trailer: AniListTrailer? = null,
     val relations: AniListRelationConnection? = null
