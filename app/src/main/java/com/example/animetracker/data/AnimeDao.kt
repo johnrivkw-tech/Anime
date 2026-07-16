@@ -23,4 +23,7 @@ interface AnimeDao {
 
     @Delete
     suspend fun delete(anime: Anime)
+
+    @Query("DELETE FROM anime_table")
+    suspend fun deleteAll()
 }
