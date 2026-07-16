@@ -19,6 +19,7 @@ import com.example.animetracker.data.MangaRepository
 import com.example.animetracker.data.ProfilePrefs
 import com.example.animetracker.data.FavoritesPrefs
 import com.example.animetracker.data.ThemePrefs
+import com.example.animetracker.data.ContentFilterPrefs
 import com.example.animetracker.data.FactionPrefs
 import com.example.animetracker.ui.model.Faction
 import com.example.animetracker.ui.theme.AppThemeOption
@@ -74,11 +75,20 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val profilePrefs = ProfilePrefs(application)
     private val favoritesPrefs = FavoritesPrefs(application)
     private val themePrefs = ThemePrefs(application)
+    private val contentFilterPrefs = ContentFilterPrefs(application)
     private val factionPrefs = FactionPrefs(application)
     private val lightNovelFolderPrefs = LightNovelFolderPrefs(application)
 
     private val _themeOption = MutableStateFlow(themePrefs.getTheme())
     val themeOption: StateFlow<AppThemeOption> = _themeOption.asStateFlow()
+
+    private val _userAge = MutableStateFlow(contentFilterPrefs.getAge())
+    val userAge: StateFlow<Int?> = _userAge.asStateFlow()
+
+    private val _matureContentEnabled = MutableStateFlow(
+        contentFilterPrefs.getMatureContentEnabled() && (contentFilterPrefs.getAge() ?: 0) >= 18
+    )
+    val matureContentEnabled: StateFlow<Boolean> = _matureContentEnabled.asStateFlow()
 
     private val _faction = MutableStateFlow(factionPrefs.getFaction())
     val faction: StateFlow<Faction> = _faction.asStateFlow()
@@ -441,6 +451,33 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         _themeOption.value = theme
     }
 
+    /** Updates the user's self-reported age. Auto-disables mature content if it drops the user below 18. */
+    fun setAge(age: Int?) {
+        contentFilterPrefs.setAge(age)
+        _userAge.value = age
+        if ((age ?: 0) < 18 && _matureContentEnabled.value) {
+            _matureContentEnabled.value = false
+            contentFilterPrefs.setMatureContentEnabled(false)
+            refreshMatureSensitiveContent()
+        }
+    }
+
+    /** No-ops if the user hasn't confirmed they're 18+ yet. */
+    fun setMatureContentEnabled(enabled: Boolean) {
+        if (enabled && (_userAge.value ?: 0) < 18) return
+        if (enabled == _matureContentEnabled.value) return
+        contentFilterPrefs.setMatureContentEnabled(enabled)
+        _matureContentEnabled.value = enabled
+        refreshMatureSensitiveContent()
+    }
+
+    /** Re-runs every AniList-backed list so a mature-content toggle takes effect immediately. */
+    private fun refreshMatureSensitiveContent() {
+        loadHomeFeed()
+        loadDiscover()
+        if (_catalogQuery.value.isNotBlank()) onCatalogQueryChange(_catalogQuery.value)
+    }
+
     fun setFaction(faction: Faction) {
         factionPrefs.setFaction(faction)
         _faction.value = faction
@@ -459,11 +496,12 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             _isHomeFeedLoading.value = true
             _homeFeedError.value = null
 
-            val trendingResult = aniListRepository.getTrending()
-            val popularResult = aniListRepository.getPopularThisSeason()
-            val topRatedResult = aniListRepository.getTopRated()
-            val newReleasesResult = aniListRepository.getNewReleases()
-            val recommendedResult = aniListRepository.getRecommended()
+            val includeMature = _matureContentEnabled.value
+            val trendingResult = aniListRepository.getTrending(includeMature)
+            val popularResult = aniListRepository.getPopularThisSeason(includeMature)
+            val topRatedResult = aniListRepository.getTopRated(includeMature)
+            val newReleasesResult = aniListRepository.getNewReleases(includeMature)
+            val recommendedResult = aniListRepository.getRecommended(includeMature)
 
             trendingResult.onSuccess { _trending.value = it }
             popularResult.onSuccess { _popularThisSeason.value = it }
@@ -585,7 +623,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             delay(400)
             _isSearchingApi.value = true
             _searchApiError.value = null
-            aniListRepository.searchAnime(query)
+            aniListRepository.searchAnime(query, includeMature = _matureContentEnabled.value)
                 .onSuccess { _searchResults.value = it }
                 .onFailure { _searchApiError.value = "Couldn't reach the anime database. Check your connection." }
             _isSearchingApi.value = false
@@ -933,7 +971,8 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             aniListRepository.discoverAnime(
                 genre = _discoverGenre.value,
                 season = _discoverSeason.value,
-                seasonYear = _discoverYear.value
+                seasonYear = _discoverYear.value,
+                includeMature = _matureContentEnabled.value
             ).onSuccess { _discoverResults.value = it }
                 .onFailure { _discoverError.value = "Couldn't load results. Check your connection and try again." }
             _isDiscoverLoading.value = false
@@ -955,7 +994,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             delay(400)
             _isCatalogSearching.value = true
             _catalogError.value = null
-            aniListRepository.searchAnime(query)
+            aniListRepository.searchAnime(query, includeMature = _matureContentEnabled.value)
                 .onSuccess { _catalogResults.value = it }
                 .onFailure { _catalogError.value = "Couldn't reach the anime database. Check your connection." }
             _isCatalogSearching.value = false
