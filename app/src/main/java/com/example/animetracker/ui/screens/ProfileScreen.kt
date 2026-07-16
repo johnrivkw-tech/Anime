@@ -26,21 +26,32 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Anchor
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Diamond
+import androidx.compose.material.icons.filled.DirectionsBoat
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Whatshot
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -151,6 +162,7 @@ fun ProfileScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}, o
                     isAvatarSaving = isAvatarSaving,
                     displayName = displayName,
                     joinedAtMillis = viewModel.profileJoinedAtMillis,
+                    rank = currentRank(faction, stats.completed),
                     onPickBanner = {
                         bannerPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     },
@@ -488,6 +500,7 @@ private fun ProfileHeader(
     isAvatarSaving: Boolean,
     displayName: String,
     joinedAtMillis: Long,
+    rank: RankTier?,
     onPickBanner: () -> Unit,
     onPickAvatar: () -> Unit,
     onNameChanged: (String) -> Unit
@@ -594,7 +607,7 @@ private fun ProfileHeader(
         }
 
         Column(modifier = Modifier.padding(horizontal = 16.dp).offset(y = (-28).dp)) {
-            EditableDisplayName(displayName = displayName, onNameChanged = onNameChanged)
+            EditableDisplayName(displayName = displayName, rank = rank, onNameChanged = onNameChanged)
             Text(
                 text = "Member since ${formatJoinedDate(joinedAtMillis)}",
                 style = MaterialTheme.typography.bodySmall,
@@ -605,7 +618,7 @@ private fun ProfileHeader(
 }
 
 @Composable
-private fun EditableDisplayName(displayName: String, onNameChanged: (String) -> Unit) {
+private fun EditableDisplayName(displayName: String, rank: RankTier?, onNameChanged: (String) -> Unit) {
     var isEditing by rememberSaveable { mutableStateOf(false) }
     var draft by remember(displayName) { mutableStateOf(displayName) }
 
@@ -631,7 +644,10 @@ private fun EditableDisplayName(displayName: String, onNameChanged: (String) -> 
                 text = displayName.ifBlank { "Add your name" },
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.ExtraBold,
-                color = if (displayName.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else Bone
+                color = if (displayName.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else Bone,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
             )
             Spacer(modifier = Modifier.width(6.dp))
             IconButton(onClick = { isEditing = true }, modifier = Modifier.size(28.dp)) {
@@ -642,12 +658,61 @@ private fun EditableDisplayName(displayName: String, onNameChanged: (String) -> 
                     modifier = Modifier.size(16.dp)
                 )
             }
+            if (rank != null) {
+                Spacer(modifier = Modifier.width(4.dp))
+                RankBadge(rank = rank)
+            }
         }
     }
 }
 
 private fun formatJoinedDate(millis: Long): String =
     SimpleDateFormat("MMMM yyyy", Locale.US).format(java.util.Date(millis))
+
+/** A distinct icon + gradient for each of the 12 rank levels, shared by both factions. */
+private data class RankVisual(val icon: ImageVector, val colors: List<Color>)
+
+private fun rankVisualFor(level: Int): RankVisual = when (level) {
+    1 -> RankVisual(Icons.Filled.Person, listOf(Color(0xFF6B7280), Color(0xFF9CA3AF)))
+    2 -> RankVisual(Icons.Filled.DirectionsBoat, listOf(Color(0xFF3B82F6), Color(0xFF60A5FA)))
+    3 -> RankVisual(Icons.Filled.Anchor, listOf(Color(0xFF0D9488), Color(0xFF2DD4BF)))
+    4 -> RankVisual(Icons.Filled.Shield, listOf(Color(0xFF16A34A), Color(0xFF4ADE80)))
+    5 -> RankVisual(Icons.Filled.Star, listOf(Color(0xFF0891B2), Color(0xFF22D3EE)))
+    6 -> RankVisual(Icons.Filled.Bolt, listOf(Color(0xFF7C3AED), Color(0xFFA78BFA)))
+    7 -> RankVisual(Icons.Filled.MilitaryTech, listOf(Color(0xFFEA580C), Color(0xFFFB923C)))
+    8 -> RankVisual(Icons.Filled.LocalFireDepartment, listOf(Color(0xFFDC2626), Color(0xFFF87171)))
+    9 -> RankVisual(Icons.Filled.Whatshot, listOf(Color(0xFFBE123C), Color(0xFFFB7185)))
+    10 -> RankVisual(Icons.Filled.WorkspacePremium, listOf(Color(0xFFCA8A04), Color(0xFFFACC15)))
+    11 -> RankVisual(Icons.Filled.EmojiEvents, listOf(Color(0xFFD97706), Color(0xFFFCD34D)))
+    else -> RankVisual(Icons.Filled.Diamond, listOf(Color(0xFFFF5A1F), Color(0xFF8B5CF6), Color(0xFFFF2D6B)))
+}
+
+/** Small pill badge showing the current rank's icon and title, meant to sit right next to the display name. */
+@Composable
+private fun RankBadge(rank: RankTier, modifier: Modifier = Modifier) {
+    val visual = remember(rank.level) { rankVisualFor(rank.level) }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .clip(RoundedCornerShape(50))
+            .background(Brush.linearGradient(visual.colors))
+            .padding(horizontal = 10.dp, vertical = 5.dp)
+    ) {
+        Icon(
+            imageVector = visual.icon,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(13.dp)
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = rank.title,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = Color.White
+        )
+    }
+}
 
 /** Big card up top: completion ring on the left, headline numbers on the right. */
 @Composable
