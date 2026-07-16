@@ -36,7 +36,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.example.animetracker.data.network.AniListMedia
-import com.example.animetracker.data.network.JikanCharacter
+import com.example.animetracker.data.network.AniListCharacterNode
 
 /**
  * Full-screen search dialog for adding a title to the Profile screen's
@@ -94,20 +94,19 @@ fun FavoriteAnimePickerDialog(
 
 /**
  * Full-screen search dialog for adding a character to the Profile screen's
- * curated "Favorite Characters" shelf. Backed by a MyAnimeList character
- * search via Jikan, unlike the per-anime cast list used elsewhere (which
- * still uses AniList).
+ * curated "Favorite Characters" shelf. Backed by an AniList character
+ * search, same source as the per-anime cast list used elsewhere in the app.
  */
 @Composable
 fun FavoriteCharacterPickerDialog(
     query: String,
     onQueryChange: (String) -> Unit,
-    results: List<JikanCharacter>,
+    results: List<AniListCharacterNode>,
     isLoading: Boolean,
     error: String?,
     alreadyPickedIds: Set<Int>,
     onDismiss: () -> Unit,
-    onSelect: (JikanCharacter) -> Unit
+    onSelect: (AniListCharacterNode) -> Unit
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -118,7 +117,7 @@ fun FavoriteCharacterPickerDialog(
                 PickerHeader(
                     query = query,
                     onQueryChange = onQueryChange,
-                    placeholder = "Search MyAnimeList characters...",
+                    placeholder = "Search anime characters...",
                     onDismiss = onDismiss
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -129,8 +128,8 @@ fun FavoriteCharacterPickerDialog(
                         query.isBlank() -> PickerMessage("Start typing to search characters")
                         results.isEmpty() -> PickerMessage("No results found")
                         else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
-                            items(results, key = { it.malId }) { result ->
-                                val alreadyPicked = result.malId in alreadyPickedIds
+                            items(results, key = { it.id }) { result ->
+                                val alreadyPicked = result.id in alreadyPickedIds
                                 FavoriteCharacterResultRow(
                                     result = result,
                                     alreadyPicked = alreadyPicked,
@@ -212,7 +211,7 @@ private fun FavoriteAnimeResultRow(result: AniListMedia, alreadyPicked: Boolean,
 }
 
 @Composable
-private fun FavoriteCharacterResultRow(result: JikanCharacter, alreadyPicked: Boolean, onClick: () -> Unit) {
+private fun FavoriteCharacterResultRow(result: AniListCharacterNode, alreadyPicked: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
