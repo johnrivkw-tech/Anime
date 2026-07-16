@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
@@ -90,7 +91,7 @@ import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}) {
+fun ProfileScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}, onBack: () -> Unit = {}) {
     val bannerPath by viewModel.profileBannerPath.collectAsState()
     val avatarPath by viewModel.profileAvatarPath.collectAsState()
     val isBannerSaving by viewModel.isBannerSaving.collectAsState()
@@ -103,7 +104,7 @@ fun ProfileScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}) {
     val favoriteAnimePicks by viewModel.favoriteAnimePicks.collectAsState()
     val favoriteCharacterPicks by viewModel.favoriteCharacterPicks.collectAsState()
 
-    val animeSearchQuery by viewModel.searchQuery.collectAsState()
+    val animeSearchQuery by viewModel.onlineSearchQuery.collectAsState()
     val animeSearchResults by viewModel.searchResults.collectAsState()
     val isSearchingAnime by viewModel.isSearchingApi.collectAsState()
     val animeSearchError by viewModel.searchApiError.collectAsState()
@@ -125,7 +126,16 @@ fun ProfileScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}) {
     ) { uri -> uri?.let { viewModel.setProfileAvatar(it) } }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Profile") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Profile") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
