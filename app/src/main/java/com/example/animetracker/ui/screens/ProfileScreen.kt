@@ -639,7 +639,12 @@ private fun EditableDisplayName(displayName: String, rank: RankTier?, onNameChan
             }
         }
     } else {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 4.dp)
+        ) {
             Text(
                 text = displayName.ifBlank { "Add your name" },
                 style = MaterialTheme.typography.headlineSmall,
@@ -659,7 +664,7 @@ private fun EditableDisplayName(displayName: String, rank: RankTier?, onNameChan
                 )
             }
             if (rank != null) {
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.weight(1f))
                 RankBadge(rank = rank)
             }
         }
@@ -687,7 +692,7 @@ private fun rankVisualFor(level: Int): RankVisual = when (level) {
     else -> RankVisual(Icons.Filled.Diamond, listOf(Color(0xFFFF5A1F), Color(0xFF8B5CF6), Color(0xFFFF2D6B)))
 }
 
-/** Small pill badge showing the current rank's icon and title, meant to sit right next to the display name. */
+/** Pill badge showing the current rank's icon and title, pinned to the right side of the name row. */
 @Composable
 private fun RankBadge(rank: RankTier, modifier: Modifier = Modifier) {
     val visual = remember(rank.level) { rankVisualFor(rank.level) }
@@ -696,20 +701,22 @@ private fun RankBadge(rank: RankTier, modifier: Modifier = Modifier) {
         modifier = modifier
             .clip(RoundedCornerShape(50))
             .background(Brush.linearGradient(visual.colors))
-            .padding(horizontal = 10.dp, vertical = 5.dp)
+            .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
         Icon(
             imageVector = visual.icon,
             contentDescription = null,
             tint = Color.White,
-            modifier = Modifier.size(13.dp)
+            modifier = Modifier.size(18.dp)
         )
-        Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = rank.title,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
