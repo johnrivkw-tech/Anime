@@ -106,6 +106,13 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     val favoriteAnime: StateFlow<List<HomeCardItem>>
 
     // --- Online "add anime" search (AniList) ---
+    // Deliberately separate from _searchQuery above: that one drives the
+    // local-library filter (My List tab), while this one just echoes back
+    // what's been typed into the online search field so the text field has
+    // something to render.
+    private val _onlineSearchQuery = MutableStateFlow("")
+    val onlineSearchQuery: StateFlow<String> = _onlineSearchQuery.asStateFlow()
+
     private val _searchResults = MutableStateFlow<List<AniListMedia>>(emptyList())
     val searchResults: StateFlow<List<AniListMedia>> = _searchResults.asStateFlow()
 
@@ -614,6 +621,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun searchOnline(query: String) {
         searchJob?.cancel()
+        _onlineSearchQuery.value = query
         if (query.isBlank()) {
             _searchResults.value = emptyList()
             _searchApiError.value = null
@@ -632,6 +640,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearSearchResults() {
         searchJob?.cancel()
+        _onlineSearchQuery.value = ""
         _searchResults.value = emptyList()
         _searchApiError.value = null
         _isSearchingApi.value = false
@@ -1115,8 +1124,19 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             _isSearchingCharacters.value = false
             return
         }
+        // Jikan's public rate limit is tight (~3 req/sec, 60/min). Waiting
+        // for at least 2 characters and debouncing a bit longer than the
+        // AniList search cuts down how often keystrokes actually fire a
+        // request, which is what was tripping frequent "can't reach
+        // MyAnimeList" failures during normal typing.
+        if (query.trim().length < 2) {
+            _characterSearchResults.value = emptyList()
+            _characterSearchError.value = null
+            _isSearchingCharacters.value = false
+            return
+        }
         characterSearchJob = viewModelScope.launch {
-            delay(400)
+            delay(600)
             _isSearchingCharacters.value = true
             _characterSearchError.value = null
             jikanRepository.searchCharacters(query)
