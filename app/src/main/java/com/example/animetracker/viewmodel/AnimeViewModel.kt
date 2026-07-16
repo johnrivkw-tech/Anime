@@ -19,6 +19,7 @@ import com.example.animetracker.data.MangaRepository
 import com.example.animetracker.data.ProfilePrefs
 import com.example.animetracker.data.FavoritesPrefs
 import com.example.animetracker.data.ThemePrefs
+import com.example.animetracker.data.PersonalityPrefs
 import com.example.animetracker.data.ContentFilterPrefs
 import com.example.animetracker.data.FactionPrefs
 import com.example.animetracker.ui.model.Faction
@@ -75,12 +76,28 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val profilePrefs = ProfilePrefs(application)
     private val favoritesPrefs = FavoritesPrefs(application)
     private val themePrefs = ThemePrefs(application)
+    private val personalityPrefs = PersonalityPrefs(application)
     private val contentFilterPrefs = ContentFilterPrefs(application)
     private val factionPrefs = FactionPrefs(application)
     private val lightNovelFolderPrefs = LightNovelFolderPrefs(application)
 
     private val _themeOption = MutableStateFlow(themePrefs.getTheme())
     val themeOption: StateFlow<AppThemeOption> = _themeOption.asStateFlow()
+
+    private val _aiPersonality = MutableStateFlow(personalityPrefs.getPersonality())
+    val aiPersonality: StateFlow<String> = _aiPersonality.asStateFlow()
+
+    /** Saves the user's custom AI personality/system-prompt. */
+    fun setAiPersonality(personality: String) {
+        personalityPrefs.setPersonality(personality)
+        _aiPersonality.value = personalityPrefs.getPersonality()
+    }
+
+    /** Resets the AI personality back to the app default. */
+    fun resetAiPersonality() {
+        personalityPrefs.resetToDefault()
+        _aiPersonality.value = personalityPrefs.getPersonality()
+    }
 
     private val _userAge = MutableStateFlow(contentFilterPrefs.getAge())
     val userAge: StateFlow<Int?> = _userAge.asStateFlow()
@@ -551,7 +568,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             _isLoadingAiRecommendations.value = true
             _aiRecommendationsError.value = null
 
-            geminiRepository.getRecommendations(watched)
+            geminiRepository.getRecommendations(watched, _aiPersonality.value)
                 .onSuccess { recs ->
                     val enriched = recs.mapNotNull { rec ->
                         aniListRepository.searchAnime(rec.title).getOrNull()?.firstOrNull()
@@ -596,7 +613,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                 .filter { it.status != AnimeStatus.PLAN_TO_WATCH }
             val conversation = (historySoFar + userMessage).map { it.isUser to it.text }
 
-            geminiChatRepository.sendMessage(conversation, watched)
+            geminiChatRepository.sendMessage(conversation, watched, _aiPersonality.value)
                 .onSuccess { chatReply ->
                     val enrichedRecs = chatReply.recommendations.mapNotNull { rec ->
                         aniListRepository.searchAnime(rec.title).getOrNull()?.firstOrNull()
