@@ -16,4 +16,6 @@ class AnimeRepository(private val animeDao: AnimeDao) {
     suspend fun update(anime: Anime) = animeDao.update(anime)
 
     suspend fun delete(anime: Anime) = animeDao.delete(anime)
+
+    suspend fun deleteAll() = animeDao.deleteAll()
 }
