@@ -1,6 +1,10 @@
 package com.example.animetracker.ui.screens
 
 import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -36,6 +40,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -90,6 +96,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.animetracker.BuildConfig
+import com.example.animetracker.data.MalXmlPort
 import com.example.animetracker.ui.components.VizoraWordmark
 import com.example.animetracker.ui.model.currentRank
 import com.example.animetracker.ui.theme.AppThemeOption
@@ -629,10 +636,50 @@ private fun AiPersonalityTab(viewModel: AnimeViewModel) {
 @Composable
 private fun DataStorageTab(viewModel: AnimeViewModel) {
     val stats by viewModel.profileStats.collectAsState()
+    val context = LocalContext.current
 
     var showClearWatchlistConfirm by remember { mutableStateOf(false) }
     var showClearChatConfirm by remember { mutableStateOf(false) }
     var showEraseAllConfirm by remember { mutableStateOf(false) }
+
+    val importMalLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        try {
+            val entries = context.contentResolver.openInputStream(uri)?.use { input ->
+                MalXmlPort.parse(input)
+            } ?: emptyList()
+
+            if (entries.isEmpty()) {
+                Toast.makeText(context, "No anime entries found in that file.", Toast.LENGTH_SHORT).show()
+            } else {
+                viewModel.importMalXml(entries) { added, updated ->
+                    Toast.makeText(
+                        context,
+                        "Imported: $added added, $updated updated.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        } catch (e: Exception) {
+            Toast.makeText(context, "Couldn't read that file. Is it a valid MAL export?", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val exportMalLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/xml")
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        try {
+            context.contentResolver.openOutputStream(uri)?.use { output ->
+                output.write(viewModel.exportMalXml().toByteArray())
+            }
+            Toast.makeText(context, "Export saved.", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(context, "Couldn't save the export file.", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     Text(
         text = "Your library",
@@ -659,6 +706,40 @@ private fun DataStorageTab(viewModel: AnimeViewModel) {
             StatRow(label = "Light novels tracked", value = stats.lightNovelCount.toString())
             SettingsDivider()
             StatRow(label = "Episodes watched", value = stats.totalEpisodesWatched.toString())
+        }
+    }
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    Text(
+        text = "MyAnimeList",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold
+    )
+    Text(
+        text = "Import a MAL export file to merge it into your library, or export your " +
+            "library to a MAL-compatible XML file.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+    )
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedButton(
+            onClick = { importMalLauncher.launch(arrayOf("text/xml", "application/xml")) },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Filled.FileUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Import from MyAnimeList")
+        }
+        OutlinedButton(
+            onClick = { exportMalLauncher.launch("vizora_mal_export.xml") },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Filled.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Export to MyAnimeList")
         }
     }
 
