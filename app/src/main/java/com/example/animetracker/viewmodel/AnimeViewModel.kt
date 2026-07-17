@@ -14,6 +14,7 @@ import com.example.animetracker.data.ChatRepository
 import com.example.animetracker.data.LightNovelEntity
 import com.example.animetracker.data.LightNovelFolderPrefs
 import com.example.animetracker.data.LightNovelRepository
+import com.example.animetracker.data.MalXmlPort
 import com.example.animetracker.data.MangaEntity
 import com.example.animetracker.data.MangaRepository
 import com.example.animetracker.data.ProfilePrefs
@@ -575,6 +576,51 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             chatRepository.clearAll()
         }
         _chatError.value = null
+    }
+
+    /** Builds a MyAnimeList-compatible XML export of the current watchlist. */
+    fun exportMalXml(): String = MalXmlPort.export(allLocalAnime.value)
+
+    /**
+     * Merges parsed MAL entries into the local library: entries whose title
+     * matches an existing entry (case-insensitive) update that entry's
+     * progress/score/status, everything else is added as new. [onComplete]
+     * reports how many of each happened so the UI can show a summary.
+     */
+    fun importMalXml(entries: List<MalXmlPort.MalEntry>, onComplete: (added: Int, updated: Int) -> Unit) {
+        viewModelScope.launch {
+            val existing = repository.allAnime.first()
+            var added = 0
+            var updated = 0
+
+            entries.forEach { entry ->
+                val match = existing.firstOrNull { it.name.equals(entry.title, ignoreCase = true) }
+                if (match != null) {
+                    repository.update(
+                        match.copy(
+                            episodesWatched = entry.episodesWatched,
+                            totalEpisodes = if (entry.totalEpisodes > 0) entry.totalEpisodes else match.totalEpisodes,
+                            rating = entry.score,
+                            status = entry.status
+                        )
+                    )
+                    updated++
+                } else {
+                    repository.insert(
+                        Anime(
+                            name = entry.title,
+                            episodesWatched = entry.episodesWatched,
+                            totalEpisodes = entry.totalEpisodes,
+                            status = entry.status,
+                            rating = entry.score
+                        )
+                    )
+                    added++
+                }
+            }
+
+            onComplete(added, updated)
+        }
     }
 
     fun onSearchQueryChange(query: String) {
