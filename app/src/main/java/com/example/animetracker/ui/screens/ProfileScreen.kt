@@ -3,6 +3,7 @@ package com.example.animetracker.ui.screens
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -38,6 +39,8 @@ import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.DirectionsBoat
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -985,7 +988,7 @@ private fun RankSection(
         Spacer(modifier = Modifier.height(12.dp))
         RankProgressCard(faction = faction, completed = completed)
         Spacer(modifier = Modifier.height(12.dp))
-        RankLadder(faction = faction, completed = completed)
+        RankLadderDropdown(faction = faction, completed = completed)
     }
 }
 
@@ -1110,18 +1113,48 @@ private fun RankProgressCard(faction: Faction, completed: Int, modifier: Modifie
 }
 
 @Composable
-private fun RankLadder(faction: Faction, completed: Int, modifier: Modifier = Modifier) {
+private fun RankLadderDropdown(faction: Faction, completed: Int, modifier: Modifier = Modifier) {
+    var expanded by remember { mutableStateOf(false) }
     val tiers = remember(faction) { ranksFor(faction).sortedByDescending { it.level } }
     val currentLevel = currentRank(faction, completed)?.level
 
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .animateContentSize(),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceVariant
     ) {
-        Column(modifier = Modifier.padding(vertical = 8.dp)) {
-            tiers.forEach { tier ->
-                RankLadderRow(tier = tier, isUnlocked = completed >= tier.completedRequired, isCurrent = tier.level == currentLevel)
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Full Rank Ladder",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                    contentDescription = if (expanded) "Collapse rank ladder" else "Expand rank ladder",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (expanded) {
+                Column(modifier = Modifier.padding(bottom = 8.dp)) {
+                    tiers.forEach { tier ->
+                        RankLadderRow(
+                            tier = tier,
+                            isUnlocked = completed >= tier.completedRequired,
+                            isCurrent = tier.level == currentLevel
+                        )
+                    }
+                }
             }
         }
     }
