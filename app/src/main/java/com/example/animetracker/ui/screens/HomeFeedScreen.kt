@@ -32,6 +32,7 @@ fun HomeFeedScreen(
     onAnimeClick: (Int) -> Unit,
     onChatClick: () -> Unit,
     onReadingClick: () -> Unit,
+    onGamesClick: () -> Unit,
     onProfileClick: () -> Unit
 ) {
     val profileAvatarPath by viewModel.profileAvatarPath.collectAsState()
@@ -100,6 +101,7 @@ fun HomeFeedScreen(
                         onClick = { item -> item.aniListId?.let(onAnimeClick) },
                         onAiClick = onChatClick,
                         onReadingClick = onReadingClick,
+                        onGamesClick = onGamesClick,
                         onProfileClick = onProfileClick,
                         profileAvatarPath = profileAvatarPath
                     )
