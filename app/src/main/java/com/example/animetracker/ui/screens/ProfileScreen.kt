@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.MilitaryTech
+import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayCircle
@@ -174,6 +175,10 @@ fun ProfileScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}, o
                     },
                     onNameChanged = { viewModel.setDisplayName(it) }
                 )
+            }
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                WorthCard(berries = stats.berries, modifier = Modifier.padding(horizontal = 16.dp))
             }
             item {
                 Spacer(modifier = Modifier.height(20.dp))
@@ -723,6 +728,63 @@ private fun RankBadge(rank: RankTier, modifier: Modifier = Modifier) {
         )
     }
 }
+
+/**
+ * Berries "net worth" card. Right now it's a straight readout of the same
+ * berries total earned from watching (50/episode, 500/completed) — the
+ * plan is to layer a real worth formula on top of this later, so this
+ * card and the number it shows are deliberately kept separate from
+ * [OverviewCard].
+ */
+@Composable
+private fun WorthCard(berries: Long, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(18.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.MonetizationOn,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column {
+                Text(
+                    text = "${formatBerries(berries)} Berries",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Your worth",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+private fun formatBerries(amount: Long): String = String.format(Locale.US, "%,d", amount)
 
 /** Big card up top: completion ring on the left, headline numbers on the right. */
 @Composable
