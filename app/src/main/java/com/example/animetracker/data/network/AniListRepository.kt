@@ -1,6 +1,10 @@
 package com.example.animetracker.data.network
 
+import com.example.animetracker.ui.model.GACHA_FORCED_MYTHIC
 import java.time.LocalDate
+
+/** AniList's media ID for the One Piece TV anime — powers the gacha roster fetch. */
+const val ONE_PIECE_ANILIST_ID = 21
 
 /** AniList's fixed genre vocabulary, used to populate the Discover filter chips. */
 val ANILIST_GENRES = listOf(
@@ -104,6 +108,28 @@ private val CHARACTERS_QUERY = """
               id
               name { full }
               image { large }
+            }
+          }
+        }
+      }
+    }
+""".trimIndent()
+
+// Powers the One Piece gacha's roster: a much wider, favourites-sorted
+// character pull than CHARACTERS_QUERY's role-sorted top 15, and includes
+// `favourites` so the gacha can rank rarity by how beloved a character is.
+private val GACHA_CHARACTERS_QUERY = """
+    query(${'$'}id: Int, ${'$'}page: Int, ${'$'}perPage: Int) {
+      Media(id: ${'$'}id, type: ANIME) {
+        characters(sort: [FAVOURITES_DESC], page: ${'$'}page, perPage: ${'$'}perPage) {
+          pageInfo { hasNextPage }
+          edges {
+            role
+            node {
+              id
+              name { full }
+              image { large }
+              favourites
             }
           }
         }
@@ -267,6 +293,50 @@ class AniListRepository {
         )
         checkErrors(response.errors)
         response.data?.Page?.characters ?: emptyList()
+    }
+
+    /**
+     * Wide character roster for the One Piece gacha, sorted by favourites
+     * so [assignGachaTiers][com.example.animetracker.ui.model.assignGachaTiers]
+     * has a real popularity signal to rank rarity against. Pages through up
+     * to [maxPages] * [perPage] characters (default up to 100), stopping
+     * early once AniList reports no more pages. Also fetches
+     * [GACHA_FORCED_MYTHIC][com.example.animetracker.ui.model.GACHA_FORCED_MYTHIC]
+     * characters by name and merges them in, in case a lore-critical Mythic
+     * (e.g. Imu) doesn't rank high enough in raw favourites to appear in the
+     * first few pages on its own.
+     */
+    suspend fun getOnePieceGachaRoster(
+        aniListId: Int = ONE_PIECE_ANILIST_ID,
+        maxPages: Int = 4,
+        perPage: Int = 25
+    ): Result<List<AniListCharacterNode>> = safeCall {
+        val all = mutableListOf<AniListCharacterNode>()
+        for (page in 1..maxPages) {
+            val response = AniListApi.service.getCharacters(
+                AniListRequest(
+                    query = GACHA_CHARACTERS_QUERY,
+                    variables = mapOf("id" to aniListId, "page" to page, "perPage" to perPage)
+                )
+            )
+            checkErrors(response.errors)
+            val connection = response.data?.Media?.characters
+            all += connection?.edges.orEmpty().map { it.node }
+            if (connection?.pageInfo?.hasNextPage != true) break
+        }
+
+        // Guarantee lore-critical Mythic pulls exist in the roster even if
+        // they didn't surface in the favourites-sorted pages above.
+        for (name in GACHA_FORCED_MYTHIC) {
+            if (all.none { it.displayName.contains(name, ignoreCase = true) }) {
+                val found = AniListApi.service.searchCharacters(
+                    AniListRequest(query = CHARACTER_SEARCH_QUERY, variables = mapOf("search" to name, "perPage" to 3))
+                ).data?.Page?.characters.orEmpty()
+                all += found.filter { it.displayName.contains(name, ignoreCase = true) }
+            }
+        }
+
+        all.distinctBy { it.id }
     }
 
     /**
