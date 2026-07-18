@@ -41,7 +41,11 @@ data class AniListCharactersResponse(
 )
 data class AniListCharactersData(val Media: AniListCharacterMedia?)
 data class AniListCharacterMedia(val characters: AniListCharacterConnection?)
-data class AniListCharacterConnection(val edges: List<AniListCharacterEdge> = emptyList())
+data class AniListCharacterConnection(
+    val edges: List<AniListCharacterEdge> = emptyList(),
+    val pageInfo: AniListPageInfo? = null
+)
+data class AniListPageInfo(val hasNextPage: Boolean = false)
 
 data class AniListCharacterSearchResponse(
     val data: AniListCharacterSearchData?,
@@ -218,7 +222,8 @@ data class AniListCharacterEdge(
 data class AniListCharacterNode(
     val id: Int,
     val name: AniListCharacterName,
-    val image: AniListCharacterImage?
+    val image: AniListCharacterImage?,
+    val favourites: Int = 0
 ) {
     val displayName: String get() = name.full ?: "Unknown"
     val imageUrl: String? get() = image?.large
