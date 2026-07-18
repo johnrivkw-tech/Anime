@@ -37,6 +37,8 @@ import com.example.animetracker.data.network.MangaDexChapter
 import com.example.animetracker.data.network.MangaDexManga
 import com.example.animetracker.data.network.MangaDexRepository
 import com.example.animetracker.ui.model.ChatMessage
+import com.example.animetracker.ui.model.BERRIES_PER_COMPLETION
+import com.example.animetracker.ui.model.BERRIES_PER_EPISODE
 import com.example.animetracker.ui.model.FavoriteAnimePick
 import com.example.animetracker.ui.model.FavoriteCharacterPick
 import com.example.animetracker.ui.model.MAX_FAVORITE_PICKS
@@ -443,19 +445,24 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                 .map { (genre, count) -> GenreCount(genre, count) }
                 .sortedByDescending { it.count }
                 .take(5)
+            val completedCount = list.count { it.status == AnimeStatus.COMPLETED }
+            val episodesWatched = list.sumOf { it.episodesWatched }
+            val berries = episodesWatched.toLong() * BERRIES_PER_EPISODE +
+                completedCount.toLong() * BERRIES_PER_COMPLETION
             ProfileStats(
                 totalAnime = list.size,
-                completed = list.count { it.status == AnimeStatus.COMPLETED },
+                completed = completedCount,
                 watching = list.count { it.status == AnimeStatus.WATCHING },
                 planToWatch = list.count { it.status == AnimeStatus.PLAN_TO_WATCH },
                 favorites = list.count { it.isFavorite },
                 totalWatchMinutes = totalMinutes,
-                totalEpisodesWatched = list.sumOf { it.episodesWatched },
+                totalEpisodesWatched = episodesWatched,
                 mangaCount = manga.size,
                 lightNovelCount = novels.size,
                 averageRating = if (rated.isEmpty()) 0.0 else rated.map { it.rating }.average(),
                 ratedCount = rated.size,
-                topGenres = genreCounts
+                topGenres = genreCounts,
+                berries = berries
             )
         }
             .stateIn(
