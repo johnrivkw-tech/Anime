@@ -27,6 +27,8 @@ import com.example.animetracker.ui.navigation.Destination
 import com.example.animetracker.ui.navigation.PROFILE_ROUTE
 import com.example.animetracker.ui.screens.HomeFeedScreen
 import com.example.animetracker.ui.screens.HomeScreen
+import com.example.animetracker.ui.screens.GamesScreen
+import com.example.animetracker.ui.screens.OnePieceGachaScreen
 import com.example.animetracker.ui.screens.LightNovelsScreen
 import com.example.animetracker.ui.screens.MangaChaptersScreen
 import com.example.animetracker.ui.screens.MangaReaderScreen
@@ -88,6 +90,7 @@ private fun VizoraApp(viewModel: AnimeViewModel) {
                     onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") },
                     onChatClick = { navController.navigate("ai_chat") },
                     onReadingClick = { navController.navigate("reading") },
+                    onGamesClick = { navController.navigate("games") },
                     onProfileClick = { navController.navigate(PROFILE_ROUTE) }
                 )
             }
@@ -138,6 +141,20 @@ private fun VizoraApp(viewModel: AnimeViewModel) {
                 MangaReaderScreen(
                     viewModel = viewModel,
                     onBack = backToHome
+                )
+            }
+            composable("games") {
+                BackHandler(onBack = backToHome)
+                GamesScreen(
+                    viewModel = viewModel,
+                    onOpenOnePieceGacha = { navController.navigate("op_gacha") }
+                )
+            }
+            composable("op_gacha") {
+                BackHandler(onBack = { navController.popBackStack() })
+                OnePieceGachaScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() }
                 )
             }
             composable("ai_chat") {
