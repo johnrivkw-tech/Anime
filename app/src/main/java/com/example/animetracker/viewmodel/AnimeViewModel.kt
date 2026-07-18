@@ -19,6 +19,7 @@ import com.example.animetracker.data.MangaEntity
 import com.example.animetracker.data.MangaRepository
 import com.example.animetracker.data.ProfilePrefs
 import com.example.animetracker.data.FavoritesPrefs
+import com.example.animetracker.data.GachaPrefs
 import com.example.animetracker.data.ThemePrefs
 import com.example.animetracker.data.PersonalityPrefs
 import com.example.animetracker.data.ContentFilterPrefs
@@ -39,6 +40,11 @@ import com.example.animetracker.data.network.MangaDexRepository
 import com.example.animetracker.ui.model.ChatMessage
 import com.example.animetracker.ui.model.BERRIES_PER_COMPLETION
 import com.example.animetracker.ui.model.BERRIES_PER_EPISODE
+import com.example.animetracker.ui.model.GACHA_SINGLE_PULL_COST
+import com.example.animetracker.ui.model.GACHA_TEN_PULL_COST
+import com.example.animetracker.ui.model.GachaCharacter
+import com.example.animetracker.ui.model.assignGachaTiers
+import com.example.animetracker.ui.model.rollGacha
 import com.example.animetracker.ui.model.FavoriteAnimePick
 import com.example.animetracker.ui.model.FavoriteCharacterPick
 import com.example.animetracker.ui.model.MAX_FAVORITE_PICKS
@@ -83,6 +89,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val factionPrefs = FactionPrefs(application)
     private val appSettingsPrefs = AppSettingsPrefs(application)
     private val lightNovelFolderPrefs = LightNovelFolderPrefs(application)
+    private val gachaPrefs = GachaPrefs(application)
 
     private val _themeOption = MutableStateFlow(themePrefs.getTheme())
     val themeOption: StateFlow<AppThemeOption> = _themeOption.asStateFlow()
@@ -1283,5 +1290,76 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         _characterSearchResults.value = emptyList()
         _characterSearchError.value = null
         _isSearchingCharacters.value = false
+    }
+
+    // --- Games: One Piece berries gacha ---
+    // Spendable balance = total berries ever earned (profileStats.berries)
+    // minus berries spent on pulls (persisted in GachaPrefs, since earned
+    // berries themselves are always recomputed fresh from the watchlist).
+
+    private val _gachaRoster = MutableStateFlow(gachaPrefs.getCachedRoster())
+    val gachaRoster: StateFlow<List<GachaCharacter>> = _gachaRoster.asStateFlow()
+
+    private val _isGachaRosterLoading = MutableStateFlow(false)
+    val isGachaRosterLoading: StateFlow<Boolean> = _isGachaRosterLoading.asStateFlow()
+
+    private val _gachaRosterError = MutableStateFlow<String?>(null)
+    val gachaRosterError: StateFlow<String?> = _gachaRosterError.asStateFlow()
+
+    private val _gachaOwnedCounts = MutableStateFlow(gachaPrefs.getOwnedCounts())
+    val gachaOwnedCounts: StateFlow<Map<Int, Int>> = _gachaOwnedCounts.asStateFlow()
+
+    private val _gachaSpentBerries = MutableStateFlow(gachaPrefs.getSpentBerries())
+
+    /** Berries the player can actually spend right now: earned minus spent. */
+    val gachaAvailableBerries: StateFlow<Long> = combine(
+        profileStats,
+        _gachaSpentBerries
+    ) { stats, spent -> (stats.berries - spent).coerceAtLeast(0L) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0L)
+
+    private val _gachaLastPull = MutableStateFlow<List<GachaCharacter>>(emptyList())
+    val gachaLastPull: StateFlow<List<GachaCharacter>> = _gachaLastPull.asStateFlow()
+
+    /** Loads the gacha roster from AniList unless a fresh cached copy already exists. */
+    fun loadGachaRoster(forceRefresh: Boolean = false) {
+        if (!forceRefresh && _gachaRoster.value.isNotEmpty() && !gachaPrefs.isRosterStale()) return
+        viewModelScope.launch {
+            _isGachaRosterLoading.value = true
+            _gachaRosterError.value = null
+            aniListRepository.getOnePieceGachaRoster()
+                .onSuccess { nodes ->
+                    val tiered = assignGachaTiers(nodes)
+                    _gachaRoster.value = tiered
+                    gachaPrefs.setCachedRoster(tiered)
+                }
+                .onFailure {
+                    if (_gachaRoster.value.isEmpty()) {
+                        _gachaRosterError.value = "Couldn't reach AniList to load the character roster. Check your connection and try again."
+                    }
+                }
+            _isGachaRosterLoading.value = false
+        }
+    }
+
+    /** Pulls once (100 berries) or ten times (900 berries); returns false without spending if funds are short. */
+    fun pullGacha(times: Int): Boolean {
+        val roster = _gachaRoster.value
+        if (roster.isEmpty()) return false
+        val cost = if (times >= 10) GACHA_TEN_PULL_COST else GACHA_SINGLE_PULL_COST * times
+        if (gachaAvailableBerries.value < cost) return false
+
+        gachaPrefs.addSpentBerries(cost)
+        _gachaSpentBerries.value = gachaPrefs.getSpentBerries()
+
+        val pulled = rollGacha(roster, times)
+        gachaPrefs.recordPulls(pulled)
+        _gachaOwnedCounts.value = gachaPrefs.getOwnedCounts()
+        _gachaLastPull.value = pulled
+        return true
+    }
+
+    fun clearGachaLastPull() {
+        _gachaLastPull.value = emptyList()
     }
 }
