@@ -19,6 +19,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Person
@@ -55,6 +56,7 @@ fun FeaturedBanner(
     onClick: (HomeCardItem) -> Unit,
     onAiClick: () -> Unit,
     onReadingClick: () -> Unit,
+    onGamesClick: () -> Unit,
     onProfileClick: () -> Unit,
     profileAvatarPath: String? = null,
     modifier: Modifier = Modifier
@@ -218,6 +220,14 @@ fun FeaturedBanner(
                             onClick = {
                                 menuExpanded = false
                                 onReadingClick()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Games") },
+                            leadingIcon = { Icon(Icons.Filled.Casino, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
+                            onClick = {
+                                menuExpanded = false
+                                onGamesClick()
                             }
                         )
                     }
