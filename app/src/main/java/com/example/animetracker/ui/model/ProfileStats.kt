@@ -13,7 +13,8 @@ data class ProfileStats(
     val lightNovelCount: Int = 0,
     val averageRating: Double = 0.0,
     val ratedCount: Int = 0,
-    val topGenres: List<GenreCount> = emptyList()
+    val topGenres: List<GenreCount> = emptyList(),
+    val berries: Long = 0
 ) {
     val watchDays: Long get() = totalWatchMinutes / (24 * 60)
     val watchHoursRemainder: Long get() = (totalWatchMinutes / 60) % 24
@@ -24,3 +25,7 @@ data class ProfileStats(
 }
 
 data class GenreCount(val genre: String, val count: Int)
+
+/** Berries economy: flat rewards, no multipliers or decay yet. */
+const val BERRIES_PER_EPISODE = 50L
+const val BERRIES_PER_COMPLETION = 500L
