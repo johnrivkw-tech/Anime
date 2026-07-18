@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
@@ -328,12 +329,34 @@ private fun ProfileHeaderCard(viewModel: AnimeViewModel) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
+            Column(horizontalAlignment = Alignment.End) {
+                Icon(
+                    imageVector = Icons.Filled.MonetizationOn,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = formatBerries(stats.berries),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "Berries",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
 
 private fun formatJoinedDate(millis: Long): String =
     SimpleDateFormat("MMMM yyyy", Locale.US).format(Date(millis))
+
+private fun formatBerries(amount: Long): String = String.format(Locale.US, "%,d", amount)
 
 @Composable
 private fun SettingsMenuRow(section: SettingsSection, onClick: () -> Unit) {
