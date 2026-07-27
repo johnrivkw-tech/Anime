@@ -146,7 +146,7 @@ fun GamesScreen(
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Pull for Straw Hats, Warlords, Emperors, and rarer secrets. 100 berries a pull.",
+                                text = "Pull for Straw Hats, Warlords, Emperors, and rarer secrets. 1,000 berries a pull.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Smoke
                             )
