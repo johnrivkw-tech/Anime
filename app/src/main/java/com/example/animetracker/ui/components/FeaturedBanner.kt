@@ -1,7 +1,7 @@
 package com.example.animetracker.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Casino
@@ -42,10 +43,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.animetracker.R
 import com.example.animetracker.ui.model.HomeCardItem
 import com.example.animetracker.ui.theme.Bone
 import com.example.animetracker.ui.theme.Smoke
@@ -132,7 +134,7 @@ fun FeaturedBanner(
                         )
                 )
 
-                Column(modifier = Modifier.align(Alignment.BottomStart).padding(20.dp)) {
+                Column(modifier = Modifier.align(Alignment.BottomStart).padding(horizontal = 20.dp)) {
                     Text(
                         text = item.title,
                         style = MaterialTheme.typography.displayLarge,
@@ -140,42 +142,80 @@ fun FeaturedBanner(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-                    if (item.genres.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
+
+                    // Meta line: age rating pill + genres, mirroring the
+                    // "16+ • Dub|Sub • Action, Supernatural..." treatment.
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(Smoke.copy(alpha = 0.25f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = if (item.isAdult) "18+" else "13+",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Bone
+                            )
+                        }
                         Text(
-                            text = item.genres.joinToString(", "),
+                            text = "  •  Sub",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Smoke
+                        )
+                        if (item.genres.isNotEmpty()) {
+                            Text(
+                                text = "  •  " + item.genres.take(4).joinToString(", "),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Smoke,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    // Short synopsis, truncated the same way a streaming
+                    // hero card clips its description to a couple of lines.
+                    if (!item.synopsis.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = item.synopsis,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Smoke,
-                            maxLines = 1,
+                            color = Bone.copy(alpha = 0.85f),
+                            maxLines = 3,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(20.dp))
                 }
             }
         }
 
-        // Page indicator dots, sit just above the title block.
+        // Page indicator dots, sit just above the bottom edge of the banner.
         if (items.size > 1) {
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = 20.dp, bottom = 110.dp),
+                    .padding(start = 20.dp, bottom = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 repeat(items.size) { index ->
                     val isSelected = pagerState.currentPage == index
                     Box(
                         modifier = Modifier
-                            .height(6.dp)
-                            .width(if (isSelected) 20.dp else 6.dp)
+                            .height(4.dp)
+                            .width(if (isSelected) 22.dp else 14.dp)
                             .clip(CircleShape)
-                            .background(if (isSelected) MaterialTheme.colorScheme.primary else Bone.copy(alpha = 0.4f))
+                            .background(if (isSelected) MaterialTheme.colorScheme.primary else Bone.copy(alpha = 0.35f))
                     )
                 }
             }
         }
 
-        // Top bar (wordmark, menu, profile) stays fixed above the pager.
+        // Top bar: brand mark top-left, utility icons top-right — matching
+        // the reference app's plain, no-background icon treatment.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -185,16 +225,17 @@ fun FeaturedBanner(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ReiWordmark(fontSize = 26.sp, markSize = 26.dp)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Image(
+                painter = painterResource(id = R.drawable.straw_hat_logo),
+                contentDescription = "Rei",
+                modifier = Modifier.size(34.dp)
+            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                 var menuExpanded by remember { mutableStateOf(false) }
                 Box {
                     IconButton(
                         onClick = { menuExpanded = true },
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.35f))
+                        modifier = Modifier.size(28.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Menu,
@@ -237,10 +278,8 @@ fun FeaturedBanner(
                 // set. Tapping it opens the profile screen.
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(28.dp)
                         .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.35f))
-                        .border(1.dp, Bone.copy(alpha = 0.5f), CircleShape)
                         .clickable(onClick = onProfileClick),
                     contentAlignment = Alignment.Center
                 ) {
@@ -250,7 +289,7 @@ fun FeaturedBanner(
                             contentDescription = "Profile",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(28.dp)
                                 .clip(CircleShape)
                         )
                     } else {
@@ -258,7 +297,7 @@ fun FeaturedBanner(
                             imageVector = Icons.Filled.Person,
                             contentDescription = "Profile",
                             tint = Bone,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(26.dp)
                         )
                     }
                 }
