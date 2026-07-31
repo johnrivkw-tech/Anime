@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -53,6 +54,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.animetracker.data.network.ANILIST_GENRES
 import com.example.animetracker.ui.components.AnimeGridCard
@@ -172,9 +174,9 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                         }
                         else -> {
                             LazyVerticalGrid(
-                                columns = GridCells.Adaptive(168.dp),
+                                columns = GridCells.Adaptive(140.dp),
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(16.dp),
+                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
@@ -218,9 +220,9 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                         }
                         else -> {
                             LazyVerticalGrid(
-                                columns = GridCells.Adaptive(168.dp),
+                                columns = GridCells.Adaptive(140.dp),
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(16.dp),
+                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
@@ -255,27 +257,29 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
  *  a small badge when filters are active so it's clear at a glance. */
 @Composable
 private fun FilterButton(activeCount: Int, onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
-        shape = RoundedCornerShape(14.dp),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = Bone),
-        modifier = Modifier.height(56.dp)
-    ) {
-        Icon(Icons.Default.FilterList, contentDescription = "Filters", modifier = Modifier.size(18.dp))
-        Spacer(modifier = Modifier.size(6.dp))
-        Text("Filters")
+    Box {
+        OutlinedButton(
+            onClick = onClick,
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Bone),
+            contentPadding = PaddingValues(0.dp),
+            modifier = Modifier.size(56.dp)
+        ) {
+            Icon(Icons.Default.FilterList, contentDescription = "Filters", modifier = Modifier.size(20.dp))
+        }
         if (activeCount > 0) {
-            Spacer(modifier = Modifier.size(6.dp))
             Box(
                 modifier = Modifier
-                    .size(20.dp)
+                    .align(Alignment.TopEnd)
+                    .offset(x = 4.dp, y = (-4).dp)
+                    .size(18.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "$activeCount",
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                     color = Bone,
                     fontWeight = FontWeight.Bold
                 )
