@@ -16,5 +16,8 @@ data class HomeCardItem(
     val score: Double?,
     val statusLabel: String?,
     val progressText: String?,
-    val genres: List<String> = emptyList()
+    val genres: List<String> = emptyList(),
+    val synopsis: String? = null,
+    val isAdult: Boolean = false,
+    val format: String? = null
 )
