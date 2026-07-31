@@ -24,14 +24,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Vizora's wordmark: a small angular diamond-and-chevron mark next to
- * bold, gradient-filled, letter-spaced text — replaces the old plain
- * cursive "Vizora" text used on the banner and splash screen.
+ * Rei's wordmark: a small angular diamond badge with a bold brush-stroke
+ * cut through it, next to bold, gradient-filled, letter-spaced text.
  * [fontSize]/[markSize] scale together so the same mark can be dropped
  * into both a compact header and a larger splash screen.
  */
 @Composable
-fun VizoraWordmark(
+fun ReiWordmark(
     modifier: Modifier = Modifier,
     fontSize: TextUnit = 28.sp,
     markSize: Dp = 28.dp
@@ -62,14 +61,13 @@ fun VizoraWordmark(
                 )
             )
 
-            // A bold "V" chevron cut into the badge.
-            val chevron = Path().apply {
-                moveTo(w * 0.27f, h * 0.30f)
-                lineTo(w * 0.5f, h * 0.68f)
-                lineTo(w * 0.73f, h * 0.30f)
+            // A single bold diagonal stroke cut into the badge.
+            val stroke = Path().apply {
+                moveTo(w * 0.30f, h * 0.68f)
+                lineTo(w * 0.70f, h * 0.30f)
             }
             drawPath(
-                path = chevron,
+                path = stroke,
                 color = backgroundColor,
                 style = Stroke(width = w * 0.12f, cap = StrokeCap.Round, join = StrokeJoin.Round)
             )
@@ -78,7 +76,7 @@ fun VizoraWordmark(
         Spacer(modifier = Modifier.width(markSize * 0.3f))
 
         Text(
-            text = "VIZORA",
+            text = "REI",
             style = TextStyle(
                 brush = Brush.linearGradient(listOf(primaryColor, secondaryColor)),
                 fontWeight = FontWeight.Black,
