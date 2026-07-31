@@ -56,7 +56,8 @@ fun BottomNavBar(navController: NavHostController) {
             // above the gesture/nav bar area itself, or it sits underneath
             // (and gets partially covered by) the system's own controls.
             .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .padding(horizontal = 16.dp)
+            .padding(top = 10.dp, bottom = 4.dp)
     ) {
         Row(
             modifier = Modifier
