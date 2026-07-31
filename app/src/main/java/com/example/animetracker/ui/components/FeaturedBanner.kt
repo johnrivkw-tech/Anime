@@ -185,7 +185,7 @@ fun FeaturedBanner(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            VizoraWordmark(fontSize = 26.sp, markSize = 26.dp)
+            ReiWordmark(fontSize = 26.sp, markSize = 26.dp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 var menuExpanded by remember { mutableStateOf(false) }
                 Box {
