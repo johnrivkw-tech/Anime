@@ -228,7 +228,7 @@ fun FeaturedBanner(
             Image(
                 painter = painterResource(id = R.drawable.straw_hat_logo),
                 contentDescription = "Rei",
-                modifier = Modifier.size(34.dp)
+                modifier = Modifier.size(52.dp)
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                 var menuExpanded by remember { mutableStateOf(false) }
@@ -278,7 +278,7 @@ fun FeaturedBanner(
                 // set. Tapping it opens the profile screen.
                 Box(
                     modifier = Modifier
-                        .size(28.dp)
+                        .size(38.dp)
                         .clip(CircleShape)
                         .clickable(onClick = onProfileClick),
                     contentAlignment = Alignment.Center
@@ -289,7 +289,7 @@ fun FeaturedBanner(
                             contentDescription = "Profile",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .size(28.dp)
+                                .size(38.dp)
                                 .clip(CircleShape)
                         )
                     } else {
@@ -297,7 +297,7 @@ fun FeaturedBanner(
                             imageVector = Icons.Filled.Person,
                             contentDescription = "Profile",
                             tint = Bone,
-                            modifier = Modifier.size(26.dp)
+                            modifier = Modifier.size(34.dp)
                         )
                     }
                 }
