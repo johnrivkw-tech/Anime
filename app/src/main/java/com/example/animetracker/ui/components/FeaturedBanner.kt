@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -65,7 +66,7 @@ fun FeaturedBanner(
 ) {
     // 50% of screen height hero banner, leaving the rest of the page
     // visible below to hint that there's more to scroll to.
-    val bannerHeight = (LocalConfiguration.current.screenHeightDp * 0.5f).dp
+    val bannerHeight = (LocalConfiguration.current.screenHeightDp * 0.6f).dp
 
     if (items.isEmpty()) {
         Box(
@@ -108,13 +109,15 @@ fun FeaturedBanner(
                 // of showing a hard edge where the image ends.
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.42f)
+                        .align(Alignment.BottomCenter)
                         .background(
                             Brush.verticalGradient(
                                 colorStops = arrayOf(
                                     0.0f to Color.Transparent,
-                                    0.45f to Color.Black.copy(alpha = 0.55f),
-                                    0.75f to Color.Black.copy(alpha = 0.92f),
+                                    0.5f to Color.Black.copy(alpha = 0.55f),
+                                    0.8f to Color.Black.copy(alpha = 0.9f),
                                     1.0f to MaterialTheme.colorScheme.background
                                 )
                             )
