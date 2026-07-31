@@ -13,8 +13,8 @@ private val fontProvider = GoogleFont.Provider(
 
 private val pacifico = GoogleFont(name = "Pacifico")
 
-/** Cursive wordmark font, used only for the "Vizora" brand overlay. */
-val VizoraLogoFont = FontFamily(
+/** Cursive wordmark font, used only for the "Rei" brand overlay. */
+val ReiLogoFont = FontFamily(
     Font(googleFont = pacifico, fontProvider = fontProvider)
 )
 
