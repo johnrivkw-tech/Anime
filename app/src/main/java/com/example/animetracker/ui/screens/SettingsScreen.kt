@@ -677,6 +677,11 @@ private fun DataStorageTab(viewModel: AnimeViewModel) {
             if (entries.isEmpty()) {
                 Toast.makeText(context, "No anime entries found in that file.", Toast.LENGTH_SHORT).show()
             } else {
+                Toast.makeText(
+                    context,
+                    "Importing ${entries.size} titles… fetching artwork for new ones, this may take a bit.",
+                    Toast.LENGTH_LONG
+                ).show()
                 viewModel.importMalXml(entries) { added, updated ->
                     Toast.makeText(
                         context,
