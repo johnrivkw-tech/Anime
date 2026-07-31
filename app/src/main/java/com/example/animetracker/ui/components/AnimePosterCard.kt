@@ -44,8 +44,8 @@ import java.util.Locale
 fun AnimePosterCard(item: HomeCardItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .width(168.dp)
-            .height(252.dp)
+            .width(180.dp)
+            .height(180.dp)
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
     ) {
@@ -130,4 +130,3 @@ fun AnimePosterCard(item: HomeCardItem, onClick: () -> Unit, modifier: Modifier 
         }
     }
 }
-
