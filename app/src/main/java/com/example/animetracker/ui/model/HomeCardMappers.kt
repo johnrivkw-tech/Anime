@@ -13,7 +13,9 @@ fun AniListMedia.toHomeCardItem(localStatus: AnimeStatus?): HomeCardItem = HomeC
     score = score,
     statusLabel = localStatus?.label,
     progressText = null,
-    genres = genres
+    genres = genres,
+    synopsis = synopsis,
+    isAdult = isAdult
 )
 
 fun Anime.toHomeCardItem(): HomeCardItem = HomeCardItem(
