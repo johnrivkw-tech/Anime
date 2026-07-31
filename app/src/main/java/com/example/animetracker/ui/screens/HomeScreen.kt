@@ -266,7 +266,7 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 96.dp),
+                    contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
@@ -399,14 +399,16 @@ private fun MyListPosterCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val progressText = if (anime.totalEpisodes > 0) {
+            val progressText = if (anime.status == AnimeStatus.COMPLETED) {
+                if (anime.totalEpisodes > 0) "Ep ${anime.totalEpisodes} · Completed" else "Completed"
+            } else if (anime.totalEpisodes > 0) {
                 "Ep ${anime.episodesWatched}/${anime.totalEpisodes}"
             } else {
                 anime.status.label
             }
             Text(
                 text = progressText,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
                 color = Smoke,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
