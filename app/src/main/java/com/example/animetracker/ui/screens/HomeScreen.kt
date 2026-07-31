@@ -392,7 +392,7 @@ private fun MyListPosterCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(2f / 3f)
+                .aspectRatio(1f)
                 .clip(RoundedCornerShape(8.dp))
         ) {
             if (anime.imageUrl != null) {
