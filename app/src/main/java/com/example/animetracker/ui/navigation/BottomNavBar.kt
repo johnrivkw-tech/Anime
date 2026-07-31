@@ -57,7 +57,7 @@ fun BottomNavBar(navController: NavHostController) {
             // (and gets partially covered by) the system's own controls.
             .navigationBarsPadding()
             .padding(horizontal = 16.dp)
-            .padding(top = 10.dp, bottom = 4.dp)
+            .padding(top = 6.dp, bottom = 4.dp)
     ) {
         Row(
             modifier = Modifier
