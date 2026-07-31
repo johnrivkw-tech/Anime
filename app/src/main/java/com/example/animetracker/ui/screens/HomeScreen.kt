@@ -30,12 +30,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -294,9 +299,9 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                 }
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
+                    columns = GridCells.Fixed(2),
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 96.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -388,7 +393,7 @@ private fun MyListPosterCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f)
-                .clip(RoundedCornerShape(6.dp))
+                .clip(RoundedCornerShape(8.dp))
         ) {
             if (anime.imageUrl != null) {
                 AsyncImage(
@@ -408,7 +413,7 @@ private fun MyListPosterCard(
                         imageVector = Icons.Filled.Movie,
                         contentDescription = null,
                         tint = Smoke,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(28.dp)
                     )
                 }
             }
@@ -417,8 +422,8 @@ private fun MyListPosterCard(
                 onClick = onToggleFavorite,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(1.dp)
-                    .size(16.dp)
+                    .padding(4.dp)
+                    .size(28.dp)
                     .clip(CircleShape)
                     .background(Color.Black.copy(alpha = 0.55f))
             ) {
@@ -426,21 +431,79 @@ private fun MyListPosterCard(
                     imageVector = if (anime.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                     contentDescription = if (anime.isFavorite) "Unfavorite" else "Favorite",
                     tint = if (anime.isFavorite) MaterialTheme.colorScheme.secondary else Bone,
-                    modifier = Modifier.size(9.dp)
+                    modifier = Modifier.size(15.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         Text(
             text = anime.name,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 11.sp),
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 13.sp, lineHeight = 16.sp),
             fontWeight = FontWeight.Medium,
             color = Bone,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val progressText = if (anime.totalEpisodes > 0) {
+                "Ep ${anime.episodesWatched}/${anime.totalEpisodes}"
+            } else {
+                anime.status.label
+            }
+            Text(
+                text = progressText,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                color = Smoke,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+
+            var menuExpanded by remember { mutableStateOf(false) }
+            Box {
+                IconButton(
+                    onClick = { menuExpanded = true },
+                    modifier = Modifier.size(20.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "More options for ${anime.name}",
+                        tint = Smoke,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Edit") },
+                        leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null, tint = Smoke) },
+                        onClick = {
+                            menuExpanded = false
+                            onClick()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete") },
+                        leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
+                        onClick = {
+                            menuExpanded = false
+                            onLongClick()
+                        }
+                    )
+                }
+            }
+        }
     }
 }
 
