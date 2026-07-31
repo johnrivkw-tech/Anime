@@ -53,7 +53,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    VizoraApp(viewModel)
+                    ReiApp(viewModel)
                 }
             }
         }
@@ -61,7 +61,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun VizoraApp(viewModel: AnimeViewModel) {
+private fun ReiApp(viewModel: AnimeViewModel) {
     val navController = rememberNavController()
     val isAppReady by viewModel.isAppReady.collectAsState()
 
