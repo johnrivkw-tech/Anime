@@ -119,9 +119,9 @@ fun HomeFeedScreen(
                 }
                 item {
                     AnimeSectionRow(
-                        title = "Trending Now",
-                        items = trendingItems,
-                        isLoading = isLoading && trendingItems.isEmpty(),
+                        title = "New Releases",
+                        items = newReleaseItems,
+                        isLoading = isLoading && newReleaseItems.isEmpty(),
                         onItemClick = { it.aniListId?.let(onAnimeClick) }
                     )
                 }
@@ -143,9 +143,9 @@ fun HomeFeedScreen(
                 }
                 item {
                     AnimeSectionRow(
-                        title = "New Releases",
-                        items = newReleaseItems,
-                        isLoading = isLoading && newReleaseItems.isEmpty(),
+                        title = "Trending Now",
+                        items = trendingItems,
+                        isLoading = isLoading && trendingItems.isEmpty(),
                         onItemClick = { it.aniListId?.let(onAnimeClick) }
                     )
                 }
