@@ -98,7 +98,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.animetracker.BuildConfig
 import com.example.animetracker.data.MalXmlPort
-import com.example.animetracker.ui.components.VizoraWordmark
+import com.example.animetracker.ui.components.ReiWordmark
 import com.example.animetracker.ui.model.currentRank
 import com.example.animetracker.ui.theme.AppThemeOption
 import com.example.animetracker.viewmodel.AnimeViewModel
@@ -120,7 +120,7 @@ private enum class SettingsSection(
     BEHAVIOR("Playback & Behavior", "Motion, haptics, data usage", Icons.Filled.Tune),
     AI_PERSONALITY("AI Personality", "Customize how the AI talks to you", Icons.Filled.SmartToy),
     DATA_STORAGE("Data & Storage", "Library stats and reset options", Icons.Filled.Storage),
-    ABOUT("About Vizora", "Version, credits, and sharing", Icons.Filled.Info)
+    ABOUT("About Rei", "Version, credits, and sharing", Icons.Filled.Info)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -464,7 +464,7 @@ private fun NotificationsTab(viewModel: AnimeViewModel) {
         fontWeight = FontWeight.Bold
     )
     Text(
-        text = "Choose what Vizora should let you know about. You can change these any time.",
+        text = "Choose what Rei should let you know about. You can change these any time.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
@@ -515,7 +515,7 @@ private fun BehaviorTab(viewModel: AnimeViewModel) {
         fontWeight = FontWeight.Bold
     )
     Text(
-        text = "Fine-tune how Vizora feels to use.",
+        text = "Fine-tune how Rei feels to use.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
@@ -757,7 +757,7 @@ private fun DataStorageTab(viewModel: AnimeViewModel) {
             Text("Import from MyAnimeList")
         }
         OutlinedButton(
-            onClick = { exportMalLauncher.launch("vizora_mal_export.xml") },
+            onClick = { exportMalLauncher.launch("rei_mal_export.xml") },
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Filled.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -847,7 +847,7 @@ private fun AboutTab() {
         modifier = Modifier.fillMaxWidth()
     ) {
         Spacer(modifier = Modifier.height(8.dp))
-        VizoraWordmark(fontSize = 30.sp, markSize = 30.dp)
+        ReiWordmark(fontSize = 30.sp, markSize = 30.dp)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
@@ -865,7 +865,7 @@ private fun AboutTab() {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Vizora is your all-in-one home for tracking anime, manga, and light novels, " +
+                text = "Rei is your all-in-one home for tracking anime, manga, and light novels, " +
                     "with AI-assisted picks tailored to your taste.",
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -914,16 +914,16 @@ private fun AboutTab() {
                 type = "text/plain"
                 putExtra(
                     Intent.EXTRA_TEXT,
-                    "Check out Vizora — the app I use to track anime, manga, and light novels!"
+                    "Check out Rei — the app I use to track anime, manga, and light novels!"
                 )
             }
-            context.startActivity(Intent.createChooser(sendIntent, "Share Vizora"))
+            context.startActivity(Intent.createChooser(sendIntent, "Share Rei"))
         },
         modifier = Modifier.fillMaxWidth()
     ) {
         Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text("Share Vizora")
+        Text("Share Rei")
     }
 }
 
