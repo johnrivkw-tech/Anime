@@ -629,7 +629,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                     updated++
                 } else {
                     val media = findBestAniListMatch(entry.title)
-                    delay(400) // stay under AniList's per-minute rate limit across a large import
+                    delay(800) // stay comfortably under AniList's 30-90 req/min limit across a large import
                     repository.insert(
                         Anime(
                             name = entry.title,
@@ -651,14 +651,36 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** Best-effort AniList lookup for a MAL title: prefers an exact (case-insensitive)
-     *  title match among the results, falling back to AniList's top search hit. */
+    /**
+     * Best-effort AniList lookup for a MAL title: prefers an exact
+     * (case-insensitive) title match among the results, falling back to
+     * AniList's top search hit.
+     *
+     * A single 400ms gap between requests turned out to be too fast: on a
+     * big import (100+ titles) it eventually tripped AniList's rate limit,
+     * and every lookup after that point silently failed, leaving the rest
+     * of the import with no artwork — which is exactly the "some titles
+     * showed, a lot didn't" pattern. Retrying with backoff instead of
+     * giving up on the first failure means a rate-limit blip only slows
+     * that one title down instead of blanking out everything after it.
+     */
     private suspend fun findBestAniListMatch(title: String): com.example.animetracker.data.network.AniListMedia? {
-        val results = aniListRepository.searchAnime(title, includeMature = true).getOrNull() ?: return null
-        return results.firstOrNull { media ->
-            listOfNotNull(media.title.english, media.title.romaji, media.title.native)
-                .any { it.equals(title, ignoreCase = true) }
-        } ?: results.firstOrNull()
+        var backoffMillis = 2000L
+        repeat(3) { attempt ->
+            val result = aniListRepository.searchAnime(title, includeMature = true)
+            val results = result.getOrNull()
+            if (results != null) {
+                return results.firstOrNull { media ->
+                    listOfNotNull(media.title.english, media.title.romaji, media.title.native)
+                        .any { it.equals(title, ignoreCase = true) }
+                } ?: results.firstOrNull()
+            }
+            if (attempt < 2) {
+                delay(backoffMillis)
+                backoffMillis *= 2
+            }
+        }
+        return null
     }
 
     fun onSearchQueryChange(query: String) {
