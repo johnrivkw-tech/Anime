@@ -44,9 +44,9 @@ import java.util.Locale
 fun AnimePosterCard(item: HomeCardItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .width(132.dp)
-            .height(196.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .width(168.dp)
+            .height(252.dp)
+            .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
     ) {
         AsyncImage(
@@ -130,3 +130,4 @@ fun AnimePosterCard(item: HomeCardItem, onClick: () -> Unit, modifier: Modifier 
         }
     }
 }
+
