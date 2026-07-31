@@ -7,8 +7,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,15 +25,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Search
@@ -42,13 +39,13 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -73,8 +70,6 @@ import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import com.example.animetracker.data.Anime
 import com.example.animetracker.data.AnimeStatus
-import com.example.animetracker.ui.components.statusColor
-import com.example.animetracker.ui.components.statusIcon
 import com.example.animetracker.ui.theme.Bone
 import com.example.animetracker.ui.theme.Smoke
 import com.example.animetracker.viewmodel.AnimeViewModel
@@ -118,7 +113,7 @@ fun HomeScreen(viewModel: AnimeViewModel) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
@@ -193,50 +188,20 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                 )
             }
 
-            // Stat tiles — tap one to jump straight to that filter.
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                StatTile(
-                    label = "Watching",
-                    count = watchingCount,
-                    status = AnimeStatus.WATCHING,
-                    selected = statusFilter == AnimeStatus.WATCHING,
-                    onClick = {
-                        viewModel.onStatusFilterChange(
-                            if (statusFilter == AnimeStatus.WATCHING) null else AnimeStatus.WATCHING
-                        )
-                    }
-                )
-                StatTile(
-                    label = "Completed",
-                    count = completedCount,
-                    status = AnimeStatus.COMPLETED,
-                    selected = statusFilter == AnimeStatus.COMPLETED,
-                    onClick = {
-                        viewModel.onStatusFilterChange(
-                            if (statusFilter == AnimeStatus.COMPLETED) null else AnimeStatus.COMPLETED
-                        )
-                    }
-                )
-                StatTile(
-                    label = "Plan to Watch",
-                    count = planCount,
-                    status = AnimeStatus.PLAN_TO_WATCH,
-                    selected = statusFilter == AnimeStatus.PLAN_TO_WATCH,
-                    onClick = {
-                        viewModel.onStatusFilterChange(
-                            if (statusFilter == AnimeStatus.PLAN_TO_WATCH) null else AnimeStatus.PLAN_TO_WATCH
-                        )
-                    }
-                )
-            }
+            // Filter tabs — flat text tabs with an underline on the active
+            // one, in the vein of a streaming app's list-header tab strip.
+            MyListFilterTabs(
+                tabs = listOf(
+                    ListTab("All", null, allAnime.size),
+                    ListTab("Watching", AnimeStatus.WATCHING, watchingCount),
+                    ListTab("Completed", AnimeStatus.COMPLETED, completedCount),
+                    ListTab("Planning", AnimeStatus.PLAN_TO_WATCH, planCount)
+                ),
+                selected = statusFilter,
+                onSelect = { viewModel.onStatusFilterChange(it) }
+            )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             val isFiltering = searchQuery.isNotEmpty() || statusFilter != null
 
@@ -301,9 +266,9 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 96.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
                     items(animeList, key = { it.id }) { anime ->
                         MyListPosterCard(
@@ -312,8 +277,7 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                                 animeBeingEdited = anime
                                 showDialog = true
                             },
-                            onLongClick = { animePendingDelete = anime },
-                            onToggleFavorite = { viewModel.toggleFavorite(anime) }
+                            onLongClick = { animePendingDelete = anime }
                         )
                     }
                 }
@@ -372,17 +336,16 @@ fun HomeScreen(viewModel: AnimeViewModel) {
 /**
  * My List grid tile: just the poster art with the title in small text
  * underneath, nothing else. Tap opens the edit dialog (status/episodes/
- * rating all live there), long-press asks to remove it, and the heart in
- * the corner toggles favorite — the old wide row-style card doesn't fit
- * a multi-column grid and was wrapping its text one letter per line.
+ * rating all live there) and long-press asks to remove it — the old
+ * wide row-style card doesn't fit a multi-column grid and was wrapping
+ * its text one letter per line.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MyListPosterCard(
     anime: Anime,
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
-    onToggleFavorite: () -> Unit
+    onLongClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -416,23 +379,6 @@ private fun MyListPosterCard(
                         modifier = Modifier.size(28.dp)
                     )
                 }
-            }
-
-            IconButton(
-                onClick = onToggleFavorite,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(4.dp)
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.55f))
-            ) {
-                Icon(
-                    imageVector = if (anime.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                    contentDescription = if (anime.isFavorite) "Unfavorite" else "Favorite",
-                    tint = if (anime.isFavorite) MaterialTheme.colorScheme.secondary else Bone,
-                    modifier = Modifier.size(15.dp)
-                )
             }
         }
 
@@ -507,43 +453,57 @@ private fun MyListPosterCard(
     }
 }
 
+/** One entry in the My List filter tab strip. `status = null` means "All". */
+private data class ListTab(val label: String, val status: AnimeStatus?, val count: Int)
+
+/**
+ * Flat text tab strip for switching the list filter — a plain label per
+ * tab, bold + underlined when active, sitting on a hairline baseline that
+ * runs the full width. Mirrors the tab row streaming apps use above their
+ * "My List" grid, rather than the old boxed chip-with-icon stat tiles.
+ */
 @Composable
-private fun StatTile(
-    label: String,
-    count: Int,
-    status: AnimeStatus,
-    selected: Boolean,
-    onClick: () -> Unit
+private fun MyListFilterTabs(
+    tabs: List<ListTab>,
+    selected: AnimeStatus?,
+    onSelect: (AnimeStatus?) -> Unit
 ) {
-    val color = statusColor(status)
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
-        color = if (selected) color.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surface,
-        modifier = Modifier.width(112.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+    Box(modifier = Modifier.fillMaxWidth()) {
+        HorizontalDivider(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            color = MaterialTheme.colorScheme.surface,
+            thickness = 1.dp
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(22.dp)
         ) {
-            Icon(
-                imageVector = statusIcon(status),
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.width(20.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "$count",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Black,
-                color = Bone
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = Smoke,
-                maxLines = 1
-            )
+            tabs.forEach { tab ->
+                val isSelected = tab.status == selected
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                        .clickable { onSelect(if (isSelected) null else tab.status) }
+                        .padding(top = 4.dp, start = 2.dp, end = 2.dp)
+                ) {
+                    Text(
+                        text = tab.label,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) Bone else Smoke
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Box(
+                        modifier = Modifier
+                            .height(2.dp)
+                            .width(if (isSelected) 22.dp else 0.dp)
+                            .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
+                    )
+                }
+            }
         }
     }
 }
