@@ -39,7 +39,7 @@ fun AnimeGridCard(item: HomeCardItem, onClick: () -> Unit, modifier: Modifier = 
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(2f / 3f)
+                .aspectRatio(1f)
                 .clip(RoundedCornerShape(8.dp))
         )
 
