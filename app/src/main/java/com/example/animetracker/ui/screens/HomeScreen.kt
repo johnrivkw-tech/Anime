@@ -355,8 +355,7 @@ private fun MyListPosterCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(8.dp))
+                .aspectRatio(2f / 3f)
         ) {
             if (anime.imageUrl != null) {
                 AsyncImage(
@@ -382,18 +381,18 @@ private fun MyListPosterCard(
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
             text = anime.name,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 13.sp, lineHeight = 16.sp),
-            fontWeight = FontWeight.Medium,
+            style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, lineHeight = 18.sp),
+            fontWeight = FontWeight.Bold,
             color = Bone,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
 
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(3.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
