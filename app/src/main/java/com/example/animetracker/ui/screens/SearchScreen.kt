@@ -53,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -131,8 +132,16 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                 OutlinedTextField(
                     value = query,
                     onValueChange = viewModel::onCatalogQueryChange,
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text("Search the anime catalog...") },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
+                    placeholder = {
+                        Text(
+                            text = "Search the anime catalog...",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
@@ -176,7 +185,7 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                             LazyVerticalGrid(
                                 columns = GridCells.Fixed(2),
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 12.dp),
+                                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 6.dp),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 verticalArrangement = Arrangement.spacedBy(18.dp)
                             ) {
@@ -222,7 +231,7 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                             LazyVerticalGrid(
                                 columns = GridCells.Fixed(2),
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 12.dp),
+                                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 6.dp),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 verticalArrangement = Arrangement.spacedBy(18.dp)
                             ) {
