@@ -68,7 +68,7 @@ implementation(libs.androidx.lifecycle.runtime.ktx)
 implementation(libs.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
-// Downloadable Google Fonts (used for the cursive "Vizora" wordmark)
+// Downloadable Google Fonts (used for the cursive "Rei" wordmark)
     implementation("androidx.compose.ui:ui-text-google-fonts:1.7.6")
 
     // Compose BOM keeps every Compose library on a matching, tested version
