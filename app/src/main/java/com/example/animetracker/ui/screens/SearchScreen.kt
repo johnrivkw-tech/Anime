@@ -174,11 +174,11 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                         }
                         else -> {
                             LazyVerticalGrid(
-                                columns = GridCells.Adaptive(140.dp),
+                                columns = GridCells.Fixed(2),
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(18.dp)
                             ) {
                                 items(catalogItems, key = { it.key }) { item ->
                                     AnimeGridCard(item = item, onClick = { item.aniListId?.let(onAnimeClick) })
@@ -220,11 +220,11 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                         }
                         else -> {
                             LazyVerticalGrid(
-                                columns = GridCells.Adaptive(140.dp),
+                                columns = GridCells.Fixed(2),
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(18.dp)
                             ) {
                                 items(discoverItems, key = { it.key }) { item ->
                                     AnimeGridCard(item = item, onClick = { item.aniListId?.let(onAnimeClick) })
