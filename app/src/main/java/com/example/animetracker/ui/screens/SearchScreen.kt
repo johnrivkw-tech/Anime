@@ -55,7 +55,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.example.animetracker.data.network.ANILIST_GENRES
-import com.example.animetracker.ui.components.AnimePosterCard
+import com.example.animetracker.ui.components.AnimeGridCard
 import com.example.animetracker.ui.model.toHomeCardItem
 import com.example.animetracker.ui.theme.Bone
 import com.example.animetracker.ui.theme.ErrorRed
@@ -172,14 +172,14 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                         }
                         else -> {
                             LazyVerticalGrid(
-                                columns = GridCells.Adaptive(128.dp),
+                                columns = GridCells.Adaptive(168.dp),
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 items(catalogItems, key = { it.key }) { item ->
-                                    AnimePosterCard(item = item, onClick = { item.aniListId?.let(onAnimeClick) })
+                                    AnimeGridCard(item = item, onClick = { item.aniListId?.let(onAnimeClick) })
                                 }
                             }
                         }
@@ -218,14 +218,14 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                         }
                         else -> {
                             LazyVerticalGrid(
-                                columns = GridCells.Adaptive(128.dp),
+                                columns = GridCells.Adaptive(168.dp),
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 items(discoverItems, key = { it.key }) { item ->
-                                    AnimePosterCard(item = item, onClick = { item.aniListId?.let(onAnimeClick) })
+                                    AnimeGridCard(item = item, onClick = { item.aniListId?.let(onAnimeClick) })
                                 }
                             }
                         }
