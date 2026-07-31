@@ -600,6 +600,14 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
      * matches an existing entry (case-insensitive) update that entry's
      * progress/score/status, everything else is added as new. [onComplete]
      * reports how many of each happened so the UI can show a summary.
+     *
+     * MAL's export only has title/episodes/score/status — no poster art,
+     * so new entries are looked up on AniList by title first to fill in
+     * [Anime.imageUrl], [Anime.aniListId], [Anime.genres] and episode
+     * runtime, the same way adding a title via search does. Titles AniList
+     * doesn't recognize are still added, just without artwork. Lookups run
+     * one at a time with a short delay to stay well under AniList's rate
+     * limit.
      */
     fun importMalXml(entries: List<MalXmlPort.MalEntry>, onComplete: (added: Int, updated: Int) -> Unit) {
         viewModelScope.launch {
@@ -620,13 +628,19 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                     )
                     updated++
                 } else {
+                    val media = findBestAniListMatch(entry.title)
+                    delay(400) // stay under AniList's per-minute rate limit across a large import
                     repository.insert(
                         Anime(
                             name = entry.title,
                             episodesWatched = entry.episodesWatched,
-                            totalEpisodes = entry.totalEpisodes,
+                            totalEpisodes = if (entry.totalEpisodes > 0) entry.totalEpisodes else (media?.episodes ?: 0),
                             status = entry.status,
-                            rating = entry.score
+                            rating = entry.score,
+                            imageUrl = media?.posterUrl,
+                            aniListId = media?.id,
+                            episodeDurationMinutes = media?.duration,
+                            genres = media?.genres ?: emptyList()
                         )
                     )
                     added++
@@ -635,6 +649,16 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
             onComplete(added, updated)
         }
+    }
+
+    /** Best-effort AniList lookup for a MAL title: prefers an exact (case-insensitive)
+     *  title match among the results, falling back to AniList's top search hit. */
+    private suspend fun findBestAniListMatch(title: String): com.example.animetracker.data.network.AniListMedia? {
+        val results = aniListRepository.searchAnime(title, includeMature = true).getOrNull() ?: return null
+        return results.firstOrNull { media ->
+            listOfNotNull(media.title.english, media.title.romaji, media.title.native)
+                .any { it.equals(title, ignoreCase = true) }
+        } ?: results.firstOrNull()
     }
 
     fun onSearchQueryChange(query: String) {
