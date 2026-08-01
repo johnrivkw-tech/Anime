@@ -14,9 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -58,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.animetracker.data.network.ANILIST_GENRES
+import com.example.animetracker.ui.components.AdaptiveAnimeGrid
 import com.example.animetracker.ui.components.AnimeGridCard
 import com.example.animetracker.ui.model.toHomeCardItem
 import com.example.animetracker.ui.theme.Bone
@@ -182,16 +180,15 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                             )
                         }
                         else -> {
-                            LazyVerticalGrid(
-                                columns = GridCells.Fixed(2),
+                            AdaptiveAnimeGrid(
+                                items = catalogItems,
+                                key = { it.key },
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 110.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalArrangement = Arrangement.spacedBy(18.dp)
-                            ) {
-                                items(catalogItems, key = { it.key }) { item ->
-                                    AnimeGridCard(item = item, onClick = { item.aniListId?.let(onAnimeClick) })
-                                }
+                                horizontalSpacing = 10.dp,
+                                verticalSpacing = 18.dp
+                            ) { item ->
+                                AnimeGridCard(item = item, onClick = { item.aniListId?.let(onAnimeClick) })
                             }
                         }
                     }
@@ -228,16 +225,15 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                             )
                         }
                         else -> {
-                            LazyVerticalGrid(
-                                columns = GridCells.Fixed(2),
+                            AdaptiveAnimeGrid(
+                                items = discoverItems,
+                                key = { it.key },
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 110.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalArrangement = Arrangement.spacedBy(18.dp)
-                            ) {
-                                items(discoverItems, key = { it.key }) { item ->
-                                    AnimeGridCard(item = item, onClick = { item.aniListId?.let(onAnimeClick) })
-                                }
+                                horizontalSpacing = 10.dp,
+                                verticalSpacing = 18.dp
+                            ) { item ->
+                                AnimeGridCard(item = item, onClick = { item.aniListId?.let(onAnimeClick) })
                             }
                         }
                     }
