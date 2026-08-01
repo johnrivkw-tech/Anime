@@ -74,6 +74,8 @@ data class AniListMedia(
     val id: Int,
     val idMal: Int?,
     val title: AniListTitle,
+    val synonyms: List<String> = emptyList(),
+    val format: String? = null,
     val episodes: Int?,
     val duration: Int?,
     val averageScore: Int?,
@@ -87,7 +89,8 @@ data class AniListMedia(
     val isAdult: Boolean = false,
     val studios: AniListStudioConnection? = null,
     val trailer: AniListTrailer? = null,
-    val relations: AniListRelationConnection? = null
+    val relations: AniListRelationConnection? = null,
+    val streamingEpisodes: List<AniListStreamingEpisode> = emptyList()
 ) {
     /** Prefers the English localized title, falling back through romaji to native script. */
     val displayTitle: String
@@ -112,6 +115,10 @@ data class AniListMedia(
             else -> null
         }
 
+    /** Human-readable release format, e.g. "TV", "Movie", "OVA". */
+    val formatLabel: String?
+        get() = format?.lowercase()?.split("_")?.joinToString(" ") { it.replaceFirstChar(Char::uppercase) }
+
     /** Plain-text synopsis; AniList's raw description often has stray HTML in it. */
     val synopsis: String?
         get() = description?.cleanAniListDescription()
@@ -128,6 +135,43 @@ data class AniListMedia(
      */
     val seasonsAndArcs: List<AniListRelationEdge>
         get() = relations?.edges.orEmpty().filter { it.node.type == "ANIME" }
+}
+
+/**
+ * One episode entry from AniList's streaming-partner listings (Crunchyroll,
+ * etc.) — just a title/thumbnail/link, not embedded video. AniList doesn't
+ * give a separate episode-number field, only a free-text [title] that's
+ * usually formatted like "Episode 5 - Some Title", so [episodeNumber] and
+ * [cleanedTitle] pick that apart on a best-effort basis. Coverage isn't
+ * guaranteed either: currently-airing/recent titles tend to have a full
+ * list, but older or less mainstream shows can have this come back sparse
+ * or empty entirely.
+ */
+data class AniListStreamingEpisode(
+    val title: String?,
+    val thumbnail: String?,
+    val url: String?,
+    val site: String?
+) {
+    private val parsed: MatchResult? by lazy {
+        title?.let { EPISODE_TITLE_PATTERN.find(it) }
+    }
+
+    /** The episode number parsed out of [title], if AniList's text followed the usual "Episode N - ..." format. */
+    val episodeNumber: Int?
+        get() = parsed?.groupValues?.get(1)?.toIntOrNull()
+
+    /** [title] with the leading "Episode N - " stripped, or the raw title if nothing was parsed. */
+    val cleanedTitle: String?
+        get() {
+            val match = parsed ?: return title
+            val rest = title?.substring(match.range.last + 1)?.trim(' ', '-', ':')
+            return rest?.ifBlank { null } ?: title
+        }
+
+    private companion object {
+        val EPISODE_TITLE_PATTERN = Regex("""^Episode\s+(\d+)""", RegexOption.IGNORE_CASE)
+    }
 }
 
 data class AniListTitle(
