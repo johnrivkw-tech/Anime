@@ -120,7 +120,7 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "My List",
-                        style = MaterialTheme.typography.displaySmall,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Black,
                         color = Bone
                     )
