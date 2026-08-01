@@ -19,6 +19,8 @@ private const val MEDIA_FIELDS = """
     id
     idMal
     title { romaji english native }
+    synonyms
+    format
     episodes
     duration
     averageScore
@@ -32,6 +34,7 @@ private const val MEDIA_FIELDS = """
     isAdult
     studios(isMain: true) { nodes { id name } }
     trailer { id site }
+    streamingEpisodes { title thumbnail url site }
 """
 
 private val SEARCH_QUERY = """
@@ -216,8 +219,9 @@ class AniListRepository {
                 )
             )
         )
-        checkErrors(response.errors)
-        response.data?.Page?.media ?: emptyList()
+        val media = response.data?.Page?.media ?: emptyList()
+        if (media.isEmpty()) checkErrors(response.errors)
+        media
     }
 
     suspend fun getTrending(includeMature: Boolean = false): Result<List<AniListMedia>> = safeCall {
@@ -263,8 +267,9 @@ class AniListRepository {
                 )
             )
         )
-        checkErrors(response.errors)
-        response.data?.Page?.media ?: emptyList()
+        val media = response.data?.Page?.media ?: emptyList()
+        if (media.isEmpty()) checkErrors(response.errors)
+        media
     }
 
     suspend fun getAnimeDetails(aniListId: Int): Result<AniListMedia> = safeCall {
@@ -279,8 +284,9 @@ class AniListRepository {
         val response = AniListApi.service.getCharacters(
             AniListRequest(query = CHARACTERS_QUERY, variables = mapOf("id" to aniListId))
         )
-        checkErrors(response.errors)
-        response.data?.Media?.characters?.edges ?: emptyList()
+        val edges = response.data?.Media?.characters?.edges ?: emptyList()
+        if (edges.isEmpty()) checkErrors(response.errors)
+        edges
     }
 
     /** Free-text character search backing the Profile screen's Favorite Characters picker. */
@@ -291,8 +297,9 @@ class AniListRepository {
                 variables = mapOf("search" to query, "perPage" to 15)
             )
         )
-        checkErrors(response.errors)
-        response.data?.Page?.characters ?: emptyList()
+        val characters = response.data?.Page?.characters ?: emptyList()
+        if (characters.isEmpty()) checkErrors(response.errors)
+        characters
     }
 
     /**
@@ -359,8 +366,9 @@ class AniListRepository {
                 )
             )
         )
-        checkErrors(response.errors)
-        response.data?.Page?.airingSchedules ?: emptyList()
+        val schedules = response.data?.Page?.airingSchedules ?: emptyList()
+        if (schedules.isEmpty()) checkErrors(response.errors)
+        schedules
     }
 
     private suspend fun fetchList(
@@ -381,8 +389,9 @@ class AniListRepository {
                 )
             )
         )
-        checkErrors(response.errors)
-        return response.data?.Page?.media ?: emptyList()
+        val media = response.data?.Page?.media ?: emptyList()
+        if (media.isEmpty()) checkErrors(response.errors)
+        return media
     }
 
     /** The current quarterly anime season, e.g. ("SUMMER", 2026). */
