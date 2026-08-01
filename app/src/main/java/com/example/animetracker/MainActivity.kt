@@ -5,6 +5,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import com.example.animetracker.ui.screens.AiChatScreen
@@ -62,13 +69,32 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun ReiApp(viewModel: AnimeViewModel) {
-    val navController = rememberNavController()
     val isAppReady by viewModel.isAppReady.collectAsState()
 
-    if (!isAppReady) {
-        SplashScreen()
-        return
+    // Cinematic hand-off from splash to the real app: the outgoing screen
+    // fades + settles back slightly while the incoming one fades + eases
+    // forward from a hair past 100% scale — a soft "push through" rather
+    // than an instant cut, so the reveal we choreographed in SplashScreen
+    // resolves smoothly instead of being clipped off.
+    AnimatedContent(
+        targetState = isAppReady,
+        transitionSpec = {
+            (fadeIn(tween(520)) + scaleIn(initialScale = 1.04f, animationSpec = tween(520)))
+                .togetherWith(fadeOut(tween(380)) + scaleOut(targetScale = 0.97f, animationSpec = tween(380)))
+        },
+        label = "splash-to-app"
+    ) { ready ->
+        if (!ready) {
+            SplashScreen()
+        } else {
+            MainAppContent(viewModel)
+        }
     }
+}
+
+@Composable
+private fun MainAppContent(viewModel: AnimeViewModel) {
+    val navController = rememberNavController()
 
     val backToHome: () -> Unit = {
         navController.popBackStack(Destination.HOME.route, false)
