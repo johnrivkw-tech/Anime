@@ -159,7 +159,7 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                 }
             }
 
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (isSearching) {
                     when {
                         isCatalogSearching -> {
