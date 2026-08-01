@@ -153,9 +153,15 @@ data class AniListStreamingEpisode(
     val url: String?,
     val site: String?
 ) {
-    private val parsed: MatchResult? by lazy {
-        title?.let { EPISODE_TITLE_PATTERN.find(it) }
-    }
+    // Not `by lazy` on purpose: this class is deserialized by Gson, which
+    // (since the constructor has no default values) builds instances via
+    // unsafe field allocation rather than calling the constructor. That
+    // means property initializers — including a lazy delegate's backing
+    // field — never run, so `by lazy` here left `parsed` in a broken state
+    // that threw the moment anything touched episodeNumber/cleanedTitle.
+    // A plain recomputed getter has no constructor-time state to miss.
+    private val parsed: MatchResult?
+        get() = title?.let { EPISODE_TITLE_PATTERN.find(it) }
 
     /** The episode number parsed out of [title], if AniList's text followed the usual "Episode N - ..." format. */
     val episodeNumber: Int?
