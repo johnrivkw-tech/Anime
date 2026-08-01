@@ -43,7 +43,11 @@ import com.example.animetracker.ui.screens.ProfileScreen
 import com.example.animetracker.ui.screens.ScheduleScreen
 import com.example.animetracker.ui.screens.SearchScreen
 import com.example.animetracker.ui.screens.SettingsScreen
-import com.example.animetracker.ui.screens.SplashScreen
+import com.example.animetracker.ui.screens.ShrineSplashScreen
+import com.example.animetracker.ui.screens.SplashQuality
+import com.example.animetracker.ui.components.ReiSealWordmark
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import com.example.animetracker.ui.theme.AnimeTrackerTheme
 import com.example.animetracker.viewmodel.AnimeViewModel
 
@@ -85,7 +89,13 @@ private fun ReiApp(viewModel: AnimeViewModel) {
         label = "splash-to-app"
     ) { ready ->
         if (!ready) {
-            SplashScreen()
+            // TODO: R.drawable.splash_shrine_bg must match whatever you
+            // actually named the artwork file you dropped into res/drawable.
+            ShrineSplashScreen(
+                background = painterResource(R.drawable.splash_shrine_bg),
+                quality = SplashQuality.MEDIUM, // drop to LOW on lower-end devices
+                logo = { ReiSealWordmark(markSize = 96.dp) }
+            )
         } else {
             MainAppContent(viewModel)
         }
