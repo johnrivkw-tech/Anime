@@ -15,7 +15,10 @@ val ANILIST_GENRES = listOf(
 
 // GraphQL field selection shared by every query below, aliasing `status` to
 // `rawStatus` so AniListMedia can expose its own human-readable `status`.
-private const val MEDIA_FIELDS = """
+// Visibility is `internal` (not `private`) so AniListSyncRepository can
+// reuse the exact same field set for the media nested inside a signed-in
+// user's list entries, rather than duplicating the literal.
+internal const val MEDIA_FIELDS = """
     id
     idMal
     title { romaji english native }
