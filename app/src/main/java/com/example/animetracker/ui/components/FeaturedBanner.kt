@@ -224,27 +224,27 @@ fun FeaturedBanner(
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
                 .padding(horizontal = 16.dp)
-                .padding(top = 48.dp),
+                .padding(top = 28.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(
                 painter = painterResource(id = R.drawable.straw_hat_logo),
                 contentDescription = "Rei",
-                modifier = Modifier.size(104.dp)
+                modifier = Modifier.size(83.dp)
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                 var menuExpanded by remember { mutableStateOf(false) }
                 Box {
                     IconButton(
                         onClick = { menuExpanded = true },
-                        modifier = Modifier.size(42.dp)
+                        modifier = Modifier.size(34.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Menu,
                             contentDescription = "Menu",
                             tint = Bone,
-                            modifier = Modifier.size(30.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                     DropdownMenu(
@@ -282,7 +282,7 @@ fun FeaturedBanner(
                 // set. Tapping it opens the profile screen.
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(34.dp)
                         .clip(CircleShape)
                         .clickable(onClick = onProfileClick),
                     contentAlignment = Alignment.Center
@@ -293,7 +293,7 @@ fun FeaturedBanner(
                             contentDescription = "Profile",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .size(42.dp)
+                                .size(34.dp)
                                 .clip(CircleShape)
                         )
                     } else {
@@ -301,7 +301,7 @@ fun FeaturedBanner(
                             imageVector = Icons.Filled.Person,
                             contentDescription = "Profile",
                             tint = Bone,
-                            modifier = Modifier.size(38.dp)
+                            modifier = Modifier.size(30.dp)
                         )
                     }
                 }
