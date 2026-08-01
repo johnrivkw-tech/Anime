@@ -346,7 +346,7 @@ private fun DetailsContent(
                         buildEpisodeChunks(details.streamingEpisodes)
                     }
                     var selectedChunk by remember(details.id) { mutableStateOf(0) }
-                    val safeSelectedChunk = selectedChunk.coerceIn(0, episodeChunks.lastIndex)
+                    val safeSelectedChunk = if (episodeChunks.isEmpty()) 0 else selectedChunk.coerceIn(0, episodeChunks.lastIndex)
                     var episodesExpanded by remember(details.id) { mutableStateOf(false) }
 
                     Row(
@@ -381,7 +381,7 @@ private fun DetailsContent(
                             Spacer(modifier = Modifier.height(10.dp))
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            episodeChunks[safeSelectedChunk].episodes.forEach { episode ->
+                            episodeChunks.getOrNull(safeSelectedChunk)?.episodes?.forEach { episode ->
                                 EpisodeListRow(episode = episode, onClick = { episode.url?.let(onOpenEpisode) })
                             }
                         }
@@ -530,6 +530,18 @@ private data class EpisodeChunk(val range: IntRange, val episodes: List<AniListS
  * for long-running shows is rarely gapless) are dropped rather than shown
  * empty.
  */
+/**
+ * Safety ceiling for how many pages we'll ever generate. AniList's episode
+ * titles are free text, and [AniListStreamingEpisode.episodeNumber] parses
+ * whatever number follows "Episode " with no upper bound — a single
+ * mislabeled/garbage title (e.g. "Episode 2145 - ..." on a 20-episode show)
+ * can otherwise inflate [maxNumber] enough that generating one chunk per
+ * 100 episodes tries to allocate thousands of chunk objects and crashes
+ * the app (OOM/ANR). If a show's parsed numbering would blow past this, we
+ * don't trust it and fall back to one unpaginated list instead.
+ */
+private const val MAX_EPISODE_CHUNKS = 100
+
 private fun buildEpisodeChunks(episodes: List<AniListStreamingEpisode>): List<EpisodeChunk> {
     val numbered = episodes.mapIndexed { index, ep -> (ep.episodeNumber ?: (index + 1)) to ep }
     val maxNumber = numbered.maxOfOrNull { it.first } ?: 0
@@ -537,10 +549,20 @@ private fun buildEpisodeChunks(episodes: List<AniListStreamingEpisode>): List<Ep
 
     val chunkSize = 100
     val chunkCount = ((maxNumber - 1) / chunkSize) + 1
-    return (0 until chunkCount).map { i ->
+    if (chunkCount > MAX_EPISODE_CHUNKS) {
+        // Parsed numbering doesn't look trustworthy (way more pages than any
+        // real show would need) — skip pagination rather than risk it.
+        return listOf(EpisodeChunk(1..episodes.size, episodes))
+    }
+    val chunks = (0 until chunkCount).map { i ->
         val range = (i * chunkSize + 1)..minOf((i + 1) * chunkSize, maxNumber)
         EpisodeChunk(range, numbered.filter { it.first in range }.map { it.second })
     }.filter { it.episodes.isNotEmpty() }
+    // Defensive: every branch above should already guarantee at least one
+    // non-empty chunk when `episodes` isn't empty, but never hand back an
+    // empty list — callers index into this with coerceIn(0, lastIndex),
+    // which throws on an empty range.
+    return chunks.ifEmpty { listOf(EpisodeChunk(1..episodes.size, episodes)) }
 }
 
 @Composable
