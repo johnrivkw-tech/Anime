@@ -52,6 +52,8 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -119,6 +121,7 @@ private enum class SettingsSection(
     NOTIFICATIONS("Notifications", "Reminders and alerts", Icons.Filled.NotificationsActive),
     BEHAVIOR("Playback & Behavior", "Motion, haptics, data usage", Icons.Filled.Tune),
     AI_PERSONALITY("AI Personality", "Customize how the AI talks to you", Icons.Filled.SmartToy),
+    ANILIST_SYNC("AniList Sync", "Log in and sync your list", Icons.Filled.Sync),
     DATA_STORAGE("Data & Storage", "Library stats and reset options", Icons.Filled.Storage),
     ABOUT("About Rei", "Version, credits, and sharing", Icons.Filled.Info)
 }
@@ -177,6 +180,7 @@ fun SettingsScreen(viewModel: AnimeViewModel) {
                         SettingsSection.NOTIFICATIONS -> NotificationsTab(viewModel)
                         SettingsSection.BEHAVIOR -> BehaviorTab(viewModel)
                         SettingsSection.AI_PERSONALITY -> AiPersonalityTab(viewModel)
+                        SettingsSection.ANILIST_SYNC -> AniListSyncTab(viewModel)
                         SettingsSection.DATA_STORAGE -> DataStorageTab(viewModel)
                         SettingsSection.ABOUT -> AboutTab()
                     }
@@ -224,7 +228,7 @@ private fun SettingsMenuList(viewModel: AnimeViewModel, onSectionSelected: (Sett
             modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
         )
         SettingsGroupCard(
-            sections = listOf(SettingsSection.DATA_STORAGE, SettingsSection.ABOUT),
+            sections = listOf(SettingsSection.ANILIST_SYNC, SettingsSection.DATA_STORAGE, SettingsSection.ABOUT),
             onSectionSelected = onSectionSelected
         )
 
@@ -655,6 +659,156 @@ private fun AiPersonalityTab(viewModel: AnimeViewModel) {
         }
     }
 }
+
+@Composable
+private fun AniListSyncTab(viewModel: AnimeViewModel) {
+    val connected by viewModel.aniListConnected.collectAsState()
+    val username by viewModel.aniListUsername.collectAsState()
+    val avatarUrl by viewModel.aniListAvatarUrl.collectAsState()
+    val syncing by viewModel.aniListSyncing.collectAsState()
+    val lastSyncedAtMillis by viewModel.aniListLastSyncedAtMillis.collectAsState()
+    val syncMessage by viewModel.aniListSyncMessage.collectAsState()
+    val context = LocalContext.current
+
+    var showDisconnectConfirm by remember { mutableStateOf(false) }
+
+    // Surface login results / sync results as a one-shot toast, then clear
+    // the message so rotating the screen doesn't show it again.
+    LaunchedEffect(syncMessage) {
+        syncMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            viewModel.clearAniListSyncMessage()
+        }
+    }
+
+    Text(
+        text = "AniList Sync",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold
+    )
+    Text(
+        text = if (connected) {
+            "Your library stays in sync with your AniList account. Changes you make here " +
+                "push to AniList, and Sync Now pulls in anything you changed over there."
+        } else {
+            "Log in with your AniList account to import your list and keep it in sync as " +
+                "you watch."
+        },
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+    )
+
+    if (connected) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (avatarUrl != null) {
+                        AsyncImage(
+                            model = avatarUrl,
+                            contentDescription = "AniList avatar",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.Person,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 14.dp)
+                ) {
+                    Text(
+                        text = username ?: "Connected",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = lastSyncedAtMillis?.let { "Last synced ${formatSyncTime(it)}" }
+                            ?: "Not synced yet",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(
+                onClick = { viewModel.syncAniListList() },
+                enabled = !syncing,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Filled.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(if (syncing) "Syncing…" else "Sync Now")
+            }
+            OutlinedButton(
+                onClick = { showDisconnectConfirm = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Filled.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Disconnect AniList")
+            }
+        }
+    } else {
+        Button(
+            onClick = {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(viewModel.buildAniListAuthUrl()))
+                context.startActivity(intent)
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Filled.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Log in with AniList")
+        }
+    }
+
+    if (showDisconnectConfirm) {
+        ConfirmActionDialog(
+            title = "Disconnect AniList?",
+            message = "This signs you out and stops syncing. Anime already in your local " +
+                "library is kept as-is.",
+            confirmLabel = "Disconnect",
+            onConfirm = { viewModel.disconnectAniList() },
+            onDismiss = { showDisconnectConfirm = false }
+        )
+    }
+}
+
+private fun formatSyncTime(millis: Long): String =
+    SimpleDateFormat("MMM d, h:mm a", Locale.US).format(Date(millis))
 
 @Composable
 private fun DataStorageTab(viewModel: AnimeViewModel) {
