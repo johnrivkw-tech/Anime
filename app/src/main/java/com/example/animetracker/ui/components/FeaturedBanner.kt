@@ -231,19 +231,20 @@ fun FeaturedBanner(
             Image(
                 painter = painterResource(id = R.drawable.straw_hat_logo),
                 contentDescription = "Rei",
-                modifier = Modifier.size(52.dp)
+                modifier = Modifier.size(104.dp)
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                 var menuExpanded by remember { mutableStateOf(false) }
                 Box {
                     IconButton(
                         onClick = { menuExpanded = true },
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(42.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Menu,
                             contentDescription = "Menu",
-                            tint = Bone
+                            tint = Bone,
+                            modifier = Modifier.size(30.dp)
                         )
                     }
                     DropdownMenu(
