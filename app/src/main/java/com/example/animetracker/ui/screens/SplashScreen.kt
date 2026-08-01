@@ -52,7 +52,7 @@ import com.example.animetracker.ui.theme.InterFontFamily
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberInfiniteTransition
+import androidx.compose.animation.core.rememberInfiniteTransition
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
