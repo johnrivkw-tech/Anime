@@ -26,28 +26,27 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -62,6 +61,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -70,8 +70,7 @@ import com.example.animetracker.data.AnimeStatus
 import com.example.animetracker.data.network.AniListCharacterEdge
 import com.example.animetracker.data.network.AniListMedia
 import com.example.animetracker.data.network.AniListRelationEdge
-import com.example.animetracker.data.network.AniListTrailer
-import com.example.animetracker.ui.components.TrailerPlayerDialog
+import com.example.animetracker.data.network.AniListStreamingEpisode
 import com.example.animetracker.ui.theme.Bone
 import com.example.animetracker.ui.theme.ErrorRed
 import com.example.animetracker.ui.theme.Smoke
@@ -93,66 +92,29 @@ fun AnimeDetailsScreen(
     val context = LocalContext.current
 
     val localEntry = remember(allLocal, aniListId) { allLocal.firstOrNull { it.aniListId == aniListId } }
-    var youtubeTrailerId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(aniListId) {
         viewModel.loadAnimeDetails(aniListId)
         viewModel.loadAnimeCharacters(aniListId)
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            TopAppBar(
-                title = { Text(details?.displayTitle ?: "", color = Bone) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Bone)
-                    }
-                },
-                actions = {
-                    if (localEntry != null) {
-                        IconButton(onClick = { viewModel.toggleFavorite(localEntry) }) {
-                            Icon(
-                                imageVector = if (localEntry.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                                contentDescription = "Favorite",
-                                tint = if (localEntry.isFavorite) MaterialTheme.colorScheme.secondary else Smoke
-                            )
-                        }
-                    }
-                    IconButton(onClick = {
-                        val title = details?.displayTitle ?: "this anime"
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(
-                                Intent.EXTRA_TEXT,
-                                "Check out $title on AniList: https://anilist.co/anime/$aniListId"
-                            )
-                        }
-                        context.startActivity(Intent.createChooser(shareIntent, "Share via"))
-                    }) {
-                        Icon(Icons.Filled.Share, contentDescription = "Share", tint = Bone)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = Bone
-                )
-            )
-        }
-    ) { paddingValues ->
+    // No TopAppBar here on purpose — back/tracking controls are overlaid
+    // directly on the hero art instead of sitting in a solid bar, so the
+    // banner reads edge-to-edge all the way to the top of the screen.
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         when {
             isLoading && details == null -> {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             }
             error != null && details == null -> {
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(paddingValues).padding(24.dp),
+                    modifier = Modifier.fillMaxSize().padding(24.dp),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -172,28 +134,102 @@ fun AnimeDetailsScreen(
                     details = details!!,
                     localEntry = localEntry,
                     characters = characters,
-                    paddingValues = paddingValues,
                     onSetStatus = { status -> viewModel.setAnimeStatus(details!!, localEntry, status) },
                     onRemove = { entry -> viewModel.deleteAnime(entry) },
-                    onRate = { entry, rating -> viewModel.rateAnime(entry, rating) },
                     onMarkEpisodeWatched = { entry -> viewModel.incrementEpisode(entry) },
                     onSelectRelated = onAnimeClick,
-                    onWatchTrailer = { trailer ->
-                        if (trailer.site.equals("youtube", ignoreCase = true) && trailer.id != null) {
-                            youtubeTrailerId = trailer.id
-                        } else {
-                            trailer.videoUrl?.let { url ->
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                            }
-                        }
+                    onOpenEpisode = { url ->
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                     }
                 )
             }
         }
-    }
 
-    youtubeTrailerId?.let { videoId ->
-        TrailerPlayerDialog(videoId = videoId, onDismiss = { youtubeTrailerId = null })
+        // Fixed overlay: back button top-left, tracking status top-right —
+        // both float on transparent circular scrims over whatever's
+        // scrolling underneath instead of a solid app bar.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+                .padding(horizontal = 16.dp)
+                .padding(top = 48.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color.Black.copy(alpha = 0.35f), CircleShape)
+            ) {
+                Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Bone)
+            }
+            if (details != null) {
+                TrackingStatusButton(
+                    localEntry = localEntry,
+                    onSetStatus = { status -> viewModel.setAnimeStatus(details!!, localEntry, status) },
+                    onRemove = { entry -> viewModel.deleteAnime(entry) }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The heart icon doubles as the whole tracking control now: tap it to open
+ * a dropdown with Watching/Completed/Plan to Watch (adding the title to the
+ * list if it isn't tracked yet) plus a Remove option once it is. Replaces
+ * the old always-visible status chip row + separate Remove button at the
+ * bottom of the screen.
+ */
+@Composable
+private fun TrackingStatusButton(
+    localEntry: Anime?,
+    onSetStatus: (AnimeStatus) -> Unit,
+    onRemove: (Anime) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier
+                .size(40.dp)
+                .background(Color.Black.copy(alpha = 0.35f), CircleShape)
+        ) {
+            Icon(
+                imageVector = if (localEntry != null) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                contentDescription = "Tracking status",
+                tint = if (localEntry != null) MaterialTheme.colorScheme.secondary else Bone
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            AnimeStatus.entries.forEach { status ->
+                DropdownMenuItem(
+                    text = { Text(status.label) },
+                    leadingIcon = {
+                        if (localEntry?.status == status) {
+                            Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    },
+                    onClick = {
+                        onSetStatus(status)
+                        expanded = false
+                    }
+                )
+            }
+            if (localEntry != null) {
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text("Remove from List", color = ErrorRed) },
+                    leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = ErrorRed) },
+                    onClick = {
+                        onRemove(localEntry)
+                        expanded = false
+                    }
+                )
+            }
+        }
     }
 }
 
@@ -202,18 +238,16 @@ private fun DetailsContent(
     details: AniListMedia,
     localEntry: Anime?,
     characters: List<AniListCharacterEdge>,
-    paddingValues: PaddingValues,
     onSetStatus: (AnimeStatus) -> Unit,
     onRemove: (Anime) -> Unit,
-    onRate: (Anime, Int) -> Unit,
     onMarkEpisodeWatched: (Anime) -> Unit,
     onSelectRelated: (Int) -> Unit,
-    onWatchTrailer: (AniListTrailer) -> Unit
+    onOpenEpisode: (String) -> Unit
 ) {
     val scroll = rememberScrollState()
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(top = paddingValues.calculateTopPadding()),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 32.dp)
     ) {
         item {
@@ -222,6 +256,18 @@ private fun DetailsContent(
         item {
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Text(text = details.displayTitle, style = MaterialTheme.typography.headlineSmall, color = Bone)
+
+                val otherNames = details.synonyms.filter { it.isNotBlank() }.take(3)
+                if (otherNames.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Also known as: ${otherNames.joinToString(", ")}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Smoke,
+                        maxLines = 2
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -254,7 +300,11 @@ private fun DetailsContent(
                 ).joinToString(" ")
                 val episodeText = if (details.episodes != null) "${details.episodes} episodes" else "Episodes unknown"
                 Text(
-                    text = listOfNotNull(seasonYear.ifBlank { null }, episodeText).joinToString(" • "),
+                    text = listOfNotNull(
+                        seasonYear.ifBlank { null },
+                        details.formatLabel,
+                        episodeText
+                    ).joinToString(" • "),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Smoke
                 )
@@ -290,18 +340,51 @@ private fun DetailsContent(
                     }
                 }
 
-                val trailer = details.trailer
-                if (trailer != null) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = { onWatchTrailer(trailer) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Bone)
+                if (details.streamingEpisodes.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    val episodeChunks = remember(details.id, details.streamingEpisodes) {
+                        buildEpisodeChunks(details.streamingEpisodes)
+                    }
+                    var selectedChunk by remember(details.id) { mutableStateOf(0) }
+                    val safeSelectedChunk = selectedChunk.coerceIn(0, episodeChunks.lastIndex)
+                    var episodesExpanded by remember(details.id) { mutableStateOf(false) }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { episodesExpanded = !episodesExpanded }
                     ) {
-                        Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Watch Trailer", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                        Text(
+                            text = "Episodes",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Bone,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            imageVector = if (episodesExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                            contentDescription = if (episodesExpanded) "Collapse episodes" else "Expand episodes",
+                            tint = Smoke
+                        )
+                    }
+
+                    if (episodesExpanded) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        // Only bother with a range picker once there's more than
+                        // one page — a 12-episode show doesn't need it.
+                        if (episodeChunks.size > 1) {
+                            EpisodeRangeDropdown(
+                                chunks = episodeChunks,
+                                selectedIndex = safeSelectedChunk,
+                                onSelect = { selectedChunk = it }
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            episodeChunks[safeSelectedChunk].episodes.forEach { episode ->
+                                EpisodeListRow(episode = episode, onClick = { episode.url?.let(onOpenEpisode) })
+                            }
+                        }
                     }
                 }
 
@@ -335,25 +418,17 @@ private fun DetailsContent(
                 }
             }
         }
-        item {
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(text = "Your List", style = MaterialTheme.typography.titleMedium, color = Bone)
-                Spacer(modifier = Modifier.height(10.dp))
-            }
-        }
-        item {
-            StatusActionSection(
-                localEntry = localEntry,
-                onSetStatus = onSetStatus,
-                onRemove = onRemove
-            )
-        }
         if (localEntry != null) {
+            item {
+                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(text = "Your List", style = MaterialTheme.typography.titleMedium, color = Bone)
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+            }
             item {
                 TrackingSection(
                     entry = localEntry,
-                    onRate = onRate,
                     onMarkEpisodeWatched = onMarkEpisodeWatched
                 )
             }
@@ -421,70 +496,11 @@ private fun HeroSection(details: AniListMedia) {
 }
 
 @Composable
-private fun StatusActionSection(
-    localEntry: Anime?,
-    onSetStatus: (AnimeStatus) -> Unit,
-    onRemove: (Anime) -> Unit
-) {
-    val scroll = rememberScrollState()
-    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-        Row(
-            modifier = Modifier.horizontalScroll(scroll),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            AnimeStatus.entries.forEach { status ->
-                FilterChip(
-                    selected = localEntry?.status == status,
-                    onClick = { onSetStatus(status) },
-                    label = { Text(status.label) },
-                    shape = RoundedCornerShape(50),
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        labelColor = Smoke,
-                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                        selectedLabelColor = Bone
-                    )
-                )
-            }
-        }
-        if (localEntry != null) {
-            Spacer(modifier = Modifier.height(10.dp))
-            OutlinedButton(
-                onClick = { onRemove(localEntry) },
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = ErrorRed)
-            ) {
-                Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Remove from List")
-            }
-        }
-    }
-}
-
-@Composable
 private fun TrackingSection(
     entry: Anime,
-    onRate: (Anime, Int) -> Unit,
     onMarkEpisodeWatched: (Anime) -> Unit
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
-        Text(text = "Your Rating", style = MaterialTheme.typography.titleSmall, color = Bone)
-        Spacer(modifier = Modifier.height(6.dp))
-        Row {
-            for (i in 1..10) {
-                Icon(
-                    imageVector = if (i <= entry.rating) Icons.Filled.Star else Icons.Outlined.Star,
-                    contentDescription = "Rate $i",
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier
-                        .size(22.dp)
-                        .clickable { onRate(entry, i) }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
         val progressText = if (entry.totalEpisodes > 0) {
             "Episode ${entry.episodesWatched} / ${entry.totalEpisodes}"
         } else {
@@ -497,7 +513,136 @@ private fun TrackingSection(
             shape = RoundedCornerShape(10.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Bone)
         ) {
-            Text("Mark Episode Watched", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+            Text("Mark Episode Watched", fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+/** One 100-episode page of a show's streaming episode list, e.g. episodes 101-200. */
+private data class EpisodeChunk(val range: IntRange, val episodes: List<AniListStreamingEpisode>)
+
+/**
+ * Splits a show's streaming episodes into pages of 100 by parsed episode
+ * number (falling back to list position for entries AniList didn't give a
+ * parseable number for), so a 1000+ episode show like One Piece gets a
+ * "1-100 / 101-200 / ..." picker instead of one enormous unscrollable row.
+ * Pages with no actual episodes in them (common — AniList's streaming data
+ * for long-running shows is rarely gapless) are dropped rather than shown
+ * empty.
+ */
+private fun buildEpisodeChunks(episodes: List<AniListStreamingEpisode>): List<EpisodeChunk> {
+    val numbered = episodes.mapIndexed { index, ep -> (ep.episodeNumber ?: (index + 1)) to ep }
+    val maxNumber = numbered.maxOfOrNull { it.first } ?: 0
+    if (maxNumber <= 0) return listOf(EpisodeChunk(1..episodes.size, episodes))
+
+    val chunkSize = 100
+    val chunkCount = ((maxNumber - 1) / chunkSize) + 1
+    return (0 until chunkCount).map { i ->
+        val range = (i * chunkSize + 1)..minOf((i + 1) * chunkSize, maxNumber)
+        EpisodeChunk(range, numbered.filter { it.first in range }.map { it.second })
+    }.filter { it.episodes.isNotEmpty() }
+}
+
+@Composable
+private fun EpisodeRangeDropdown(
+    chunks: List<EpisodeChunk>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.clickable { expanded = true }
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = "Ep ${chunks[selectedIndex].range.first}-${chunks[selectedIndex].range.last}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Bone
+                )
+                Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = Bone, modifier = Modifier.size(18.dp))
+            }
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            chunks.forEachIndexed { index, chunk ->
+                DropdownMenuItem(
+                    text = { Text("Episodes ${chunk.range.first}-${chunk.range.last}") },
+                    leadingIcon = {
+                        if (index == selectedIndex) {
+                            Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    },
+                    onClick = {
+                        onSelect(index)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EpisodeListRow(episode: AniListStreamingEpisode, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(modifier = Modifier.width(140.dp).height(90.dp)) {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                AsyncImage(
+                    model = episode.thumbnail,
+                    contentDescription = episode.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(34.dp)
+                    .background(Color.Black.copy(alpha = 0.45f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    tint = Bone,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            val label = buildString {
+                if (episode.episodeNumber != null) append("${episode.episodeNumber}. ")
+                append(episode.cleanedTitle ?: episode.title ?: "Episode")
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Bone,
+                maxLines = 3
+            )
+            if (!episode.site.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = episode.site,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Smoke,
+                    maxLines = 1
+                )
+            }
         }
     }
 }
