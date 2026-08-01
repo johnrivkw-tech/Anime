@@ -17,6 +17,14 @@ val localProperties = Properties().apply {
 }
 val geminiApiKey: String = localProperties.getProperty("GEMINI_API_KEY", "")
 
+// AniList OAuth "client" (implicit grant) app ID. Register one for free at
+// https://anilist.co/settings/developer — set its redirect URL to
+// `rei://anilist-auth`. Add `ANILIST_CLIENT_ID=your-id-here` to the
+// gitignored local.properties, same as the Gemini key above. No client
+// secret is needed since this uses the implicit grant flow (token comes
+// back directly in the redirect, nothing to exchange server-side).
+val aniListClientId: String = localProperties.getProperty("ANILIST_CLIENT_ID", "")
+
 android {
     namespace = "com.example.animetracker"
     compileSdk = 36
@@ -28,6 +36,7 @@ android {
         versionCode = 1
         versionName = "1.0"
         buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
+        buildConfigField("String", "ANILIST_CLIENT_ID", "\"$aniListClientId\"")
     }
 
     buildTypes {
