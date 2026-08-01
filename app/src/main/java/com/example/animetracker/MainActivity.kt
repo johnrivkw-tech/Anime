@@ -1,10 +1,12 @@
 package com.example.animetracker
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -52,11 +54,17 @@ import com.example.animetracker.ui.theme.AnimeTrackerTheme
 import com.example.animetracker.viewmodel.AnimeViewModel
 
 class MainActivity : ComponentActivity() {
+    // Held at the Activity level (rather than fetched via viewModel() inside
+    // setContent) so onNewIntent — which fires when the AniList login
+    // redirect comes back into this already-running activity — has a
+    // reference to hand the redirect Uri to.
+    private val viewModel: AnimeViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        handleAniListRedirectIfPresent(intent)
         setContent {
-            val viewModel: AnimeViewModel = viewModel()
             val themeOption by viewModel.themeOption.collectAsState()
 
             AnimeTrackerTheme(themeOption) {
@@ -67,6 +75,20 @@ class MainActivity : ComponentActivity() {
                     ReiApp(viewModel)
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleAniListRedirectIfPresent(intent)
+    }
+
+    /** If [intent] is the `rei://anilist-auth` OAuth redirect, hands it to the ViewModel to finish login. */
+    private fun handleAniListRedirectIfPresent(intent: Intent?) {
+        val uri = intent?.data ?: return
+        if (uri.scheme == "rei" && uri.host == "anilist-auth") {
+            viewModel.handleAniListAuthRedirect(uri)
         }
     }
 }
