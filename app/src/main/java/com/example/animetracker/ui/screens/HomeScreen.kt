@@ -205,7 +205,9 @@ fun HomeScreen(viewModel: AnimeViewModel) {
 
             if (animeList.isEmpty()) {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -264,7 +266,9 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                 AdaptiveAnimeGrid(
                     items = animeList,
                     key = { it.id },
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
                     contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 110.dp),
                     horizontalSpacing = 10.dp,
                     verticalSpacing = 18.dp
