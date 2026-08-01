@@ -22,9 +22,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -70,6 +67,7 @@ import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import com.example.animetracker.data.Anime
 import com.example.animetracker.data.AnimeStatus
+import com.example.animetracker.ui.components.AdaptiveAnimeGrid
 import com.example.animetracker.ui.theme.Bone
 import com.example.animetracker.ui.theme.Smoke
 import com.example.animetracker.viewmodel.AnimeViewModel
@@ -263,23 +261,22 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                     }
                 }
             } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
+                AdaptiveAnimeGrid(
+                    items = animeList,
+                    key = { it.id },
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 110.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(18.dp)
-                ) {
-                    items(animeList, key = { it.id }) { anime ->
-                        MyListPosterCard(
-                            anime = anime,
-                            onClick = {
-                                animeBeingEdited = anime
-                                showDialog = true
-                            },
-                            onLongClick = { animePendingDelete = anime }
-                        )
-                    }
+                    horizontalSpacing = 10.dp,
+                    verticalSpacing = 18.dp
+                ) { anime ->
+                    MyListPosterCard(
+                        anime = anime,
+                        onClick = {
+                            animeBeingEdited = anime
+                            showDialog = true
+                        },
+                        onLongClick = { animePendingDelete = anime }
+                    )
                 }
             }
         }
