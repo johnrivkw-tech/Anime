@@ -3,6 +3,7 @@ package com.example.animetracker.data.network
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.Header
 import retrofit2.http.Headers
 import retrofit2.http.POST
 
@@ -33,6 +34,32 @@ interface AniListApiService {
     @Headers("Accept: application/json")
     @POST(".")
     suspend fun getAiringSchedule(@Body request: AniListRequest): AniListScheduleResponse
+
+    // --- Authenticated calls (AniList account sync) ---------------------
+    // These three need a per-user "Authorization: Bearer <token>" header,
+    // so unlike the calls above (all public/keyless) it's passed explicitly
+    // per-request rather than baked into the shared Retrofit client.
+
+    @Headers("Accept: application/json")
+    @POST(".")
+    suspend fun getViewer(
+        @Header("Authorization") authorization: String,
+        @Body request: AniListRequest
+    ): AniListViewerResponse
+
+    @Headers("Accept: application/json")
+    @POST(".")
+    suspend fun getMediaListCollection(
+        @Header("Authorization") authorization: String,
+        @Body request: AniListRequest
+    ): AniListMediaListCollectionResponse
+
+    @Headers("Accept: application/json")
+    @POST(".")
+    suspend fun saveMediaListEntry(
+        @Header("Authorization") authorization: String,
+        @Body request: AniListRequest
+    ): AniListSaveMediaListEntryResponse
 }
 
 /**
