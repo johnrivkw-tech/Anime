@@ -25,12 +25,16 @@ import com.example.animetracker.data.PersonalityPrefs
 import com.example.animetracker.data.ContentFilterPrefs
 import com.example.animetracker.data.FactionPrefs
 import com.example.animetracker.data.AppSettingsPrefs
+import com.example.animetracker.data.AniListAuthPrefs
 import com.example.animetracker.ui.model.Faction
 import com.example.animetracker.ui.theme.AppThemeOption
 import com.example.animetracker.data.network.AniListAiringSchedule
 import com.example.animetracker.data.network.AniListCharacterEdge
 import com.example.animetracker.data.network.AniListMedia
 import com.example.animetracker.data.network.AniListRepository
+import com.example.animetracker.data.network.AniListSyncRepository
+import com.example.animetracker.data.network.toAnimeStatus
+import com.example.animetracker.BuildConfig
 import com.example.animetracker.data.network.GeminiChatRepository
 import com.example.animetracker.data.network.GeminiRepository
 import com.example.animetracker.data.network.AniListCharacterNode
@@ -78,6 +82,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private lateinit var lightNovelRepository: LightNovelRepository
     private lateinit var mangaRepository: MangaRepository
     private val aniListRepository = AniListRepository()
+    private val aniListSyncRepository = AniListSyncRepository()
     private val mangaDexRepository = MangaDexRepository()
     private val geminiRepository = GeminiRepository()
     private val geminiChatRepository = GeminiChatRepository()
@@ -88,6 +93,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val contentFilterPrefs = ContentFilterPrefs(application)
     private val factionPrefs = FactionPrefs(application)
     private val appSettingsPrefs = AppSettingsPrefs(application)
+    private val aniListAuthPrefs = AniListAuthPrefs(application)
     private val lightNovelFolderPrefs = LightNovelFolderPrefs(application)
     private val gachaPrefs = GachaPrefs(application)
 
@@ -574,6 +580,165 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         _dataSaver.value = enabled
     }
 
+    // --- AniList account sync ---
+
+    private val _aniListConnected = MutableStateFlow(aniListAuthPrefs.isLoggedIn())
+    val aniListConnected: StateFlow<Boolean> = _aniListConnected.asStateFlow()
+
+    private val _aniListUsername = MutableStateFlow(aniListAuthPrefs.getUsername())
+    val aniListUsername: StateFlow<String?> = _aniListUsername.asStateFlow()
+
+    private val _aniListAvatarUrl = MutableStateFlow(aniListAuthPrefs.getAvatarUrl())
+    val aniListAvatarUrl: StateFlow<String?> = _aniListAvatarUrl.asStateFlow()
+
+    private val _aniListSyncing = MutableStateFlow(false)
+    val aniListSyncing: StateFlow<Boolean> = _aniListSyncing.asStateFlow()
+
+    private val _aniListLastSyncedAtMillis = MutableStateFlow(aniListAuthPrefs.getLastSyncedAtMillis())
+    val aniListLastSyncedAtMillis: StateFlow<Long?> = _aniListLastSyncedAtMillis.asStateFlow()
+
+    /** One-shot status/error text for the Settings screen to show as a toast/snackbar, then clear. */
+    private val _aniListSyncMessage = MutableStateFlow<String?>(null)
+    val aniListSyncMessage: StateFlow<String?> = _aniListSyncMessage.asStateFlow()
+
+    fun clearAniListSyncMessage() {
+        _aniListSyncMessage.value = null
+    }
+
+    /** The URL to launch in a browser to start AniList login. */
+    fun buildAniListAuthUrl(): String = aniListSyncRepository.buildAuthorizationUrl(BuildConfig.ANILIST_CLIENT_ID)
+
+    /**
+     * Handles the `rei://anilist-auth#access_token=...` redirect once the
+     * user finishes logging in on AniList's site: saves the token, fetches
+     * their profile, and kicks off an initial list pull.
+     */
+    fun handleAniListAuthRedirect(uri: Uri) {
+        val token = aniListSyncRepository.parseRedirect(uri)
+        if (token == null) {
+            _aniListSyncMessage.value = "AniList login didn't go through. Please try again."
+            return
+        }
+        viewModelScope.launch {
+            aniListAuthPrefs.saveSession(token.accessToken, token.expiresInSeconds)
+            aniListSyncRepository.fetchViewer(token.accessToken)
+                .onSuccess { viewer ->
+                    aniListAuthPrefs.saveProfile(viewer.id, viewer.name, viewer.avatar?.bestUrl)
+                    _aniListConnected.value = true
+                    _aniListUsername.value = viewer.name
+                    _aniListAvatarUrl.value = viewer.avatar?.bestUrl
+                    _aniListSyncMessage.value = "Connected as ${viewer.name}. Syncing your list…"
+                    syncAniListList()
+                }
+                .onFailure {
+                    aniListAuthPrefs.clear()
+                    _aniListSyncMessage.value = "Logged in, but couldn't load your AniList profile. Please try again."
+                }
+        }
+    }
+
+    /**
+     * Pulls the signed-in user's AniList list and merges it into the local
+     * library: entries already tracked locally (matched by [Anime.aniListId])
+     * get their progress/status/score updated from AniList, everything else
+     * is added as new. Local-only entries (no AniList link) are left alone.
+     */
+    fun syncAniListList() {
+        val token = aniListAuthPrefs.getAccessToken()
+        val userId = aniListAuthPrefs.getUserId()
+        if (token == null || userId == null) {
+            _aniListConnected.value = false
+            _aniListSyncMessage.value = "Your AniList session expired. Please log in again."
+            return
+        }
+        viewModelScope.launch {
+            _aniListSyncing.value = true
+            aniListSyncRepository.fetchAnimeList(token, userId)
+                .onSuccess { entries ->
+                    val existing = repository.allAnime.first()
+                    val existingByAniListId = existing.mapNotNull { a -> a.aniListId?.let { it to a } }.toMap()
+                    var added = 0
+                    var updated = 0
+
+                    entries.forEach { entry ->
+                        val media = entry.media
+                        val match = existingByAniListId[media.id]
+                        val rating = entry.score.toInt().coerceIn(0, 10)
+                        if (match != null) {
+                            repository.update(
+                                match.copy(
+                                    name = media.displayTitle,
+                                    episodesWatched = entry.progress,
+                                    totalEpisodes = media.episodes ?: match.totalEpisodes,
+                                    status = entry.status.toAnimeStatus(),
+                                    rating = if (rating > 0) rating else match.rating,
+                                    imageUrl = media.posterUrl ?: match.imageUrl,
+                                    episodeDurationMinutes = media.duration ?: match.episodeDurationMinutes,
+                                    genres = media.genres.ifEmpty { match.genres }
+                                )
+                            )
+                            updated++
+                        } else {
+                            repository.insert(
+                                Anime(
+                                    name = media.displayTitle,
+                                    episodesWatched = entry.progress,
+                                    totalEpisodes = media.episodes ?: 0,
+                                    status = entry.status.toAnimeStatus(),
+                                    rating = rating,
+                                    imageUrl = media.posterUrl,
+                                    aniListId = media.id,
+                                    episodeDurationMinutes = media.duration,
+                                    genres = media.genres
+                                )
+                            )
+                            added++
+                        }
+                    }
+
+                    aniListAuthPrefs.saveLastSyncedAtNow()
+                    _aniListLastSyncedAtMillis.value = aniListAuthPrefs.getLastSyncedAtMillis()
+                    _aniListSyncMessage.value = "Synced with AniList: $added added, $updated updated."
+                }
+                .onFailure {
+                    _aniListSyncMessage.value = "Couldn't sync with AniList. Check your connection and try again."
+                }
+            _aniListSyncing.value = false
+        }
+    }
+
+    /** Signs out of AniList. Local library data already synced in stays put. */
+    fun disconnectAniList() {
+        aniListAuthPrefs.clear()
+        _aniListConnected.value = false
+        _aniListUsername.value = null
+        _aniListAvatarUrl.value = null
+        _aniListLastSyncedAtMillis.value = null
+        _aniListSyncMessage.value = "Disconnected from AniList."
+    }
+
+    /**
+     * Fire-and-forget push of a local change back to AniList, for entries
+     * that came from (or were later matched to) an AniList title. Silently
+     * no-ops if AniList isn't connected or the entry has no [Anime.aniListId] —
+     * this is a best-effort background sync, not something the UI blocks on.
+     */
+    private fun pushAniListUpdateIfLinked(anime: Anime) {
+        val aniListId = anime.aniListId ?: return
+        val token = aniListAuthPrefs.getAccessToken() ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            aniListSyncRepository.updateListEntry(
+                accessToken = token,
+                mediaId = aniListId,
+                status = anime.status,
+                progress = anime.episodesWatched,
+                score = anime.rating
+            )
+            // Best-effort: a failure here (offline, rate limit, etc.) just
+            // means this one change stays local until the next manual sync.
+        }
+    }
+
     // --- Data & storage actions ---
 
     /** Wipes every locally tracked anime entry. Manga/light novels/chat are untouched. */
@@ -841,16 +1006,16 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addAnimeFromSearchResult(result: AniListMedia) {
         viewModelScope.launch {
-            repository.insert(
-                Anime(
-                    name = result.displayTitle,
-                    totalEpisodes = result.episodes ?: 0,
-                    imageUrl = result.posterUrl,
-                    aniListId = result.id,
-                    episodeDurationMinutes = result.duration,
-                    genres = result.genres
-                )
+            val new = Anime(
+                name = result.displayTitle,
+                totalEpisodes = result.episodes ?: 0,
+                imageUrl = result.posterUrl,
+                aniListId = result.id,
+                episodeDurationMinutes = result.duration,
+                genres = result.genres
             )
+            repository.insert(new)
+            pushAniListUpdateIfLinked(new)
         }
     }
 
@@ -1070,6 +1235,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     fun updateAnime(anime: Anime) {
         viewModelScope.launch {
             repository.update(anime)
+            pushAniListUpdateIfLinked(anime)
         }
     }
 
@@ -1077,7 +1243,9 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val cap = if (anime.totalEpisodes > 0) anime.totalEpisodes else Int.MAX_VALUE
             val next = (anime.episodesWatched + 1).coerceAtMost(cap)
-            repository.update(anime.copy(episodesWatched = next))
+            val updated = anime.copy(episodesWatched = next)
+            repository.update(updated)
+            pushAniListUpdateIfLinked(updated)
         }
     }
 
@@ -1119,26 +1287,30 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     fun setAnimeStatus(details: AniListMedia, existing: Anime?, status: AnimeStatus) {
         viewModelScope.launch {
             if (existing != null) {
-                repository.update(existing.copy(status = status))
+                val updated = existing.copy(status = status)
+                repository.update(updated)
+                pushAniListUpdateIfLinked(updated)
             } else {
-                repository.insert(
-                    Anime(
-                        name = details.displayTitle,
-                        totalEpisodes = details.episodes ?: 0,
-                        status = status,
-                        imageUrl = details.posterUrl,
-                        aniListId = details.id,
-                        episodeDurationMinutes = details.duration,
-                        genres = details.genres
-                    )
+                val new = Anime(
+                    name = details.displayTitle,
+                    totalEpisodes = details.episodes ?: 0,
+                    status = status,
+                    imageUrl = details.posterUrl,
+                    aniListId = details.id,
+                    episodeDurationMinutes = details.duration,
+                    genres = details.genres
                 )
+                repository.insert(new)
+                pushAniListUpdateIfLinked(new)
             }
         }
     }
 
     fun rateAnime(anime: Anime, rating: Int) {
         viewModelScope.launch {
-            repository.update(anime.copy(rating = rating))
+            val updated = anime.copy(rating = rating)
+            repository.update(updated)
+            pushAniListUpdateIfLinked(updated)
         }
     }
 
