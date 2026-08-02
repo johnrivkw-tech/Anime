@@ -15,10 +15,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
@@ -44,7 +46,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.animetracker.data.network.ANILIST_GENRES
+import com.example.animetracker.data.network.AniListMedia
 import com.example.animetracker.ui.components.AdaptiveAnimeGrid
+import com.example.animetracker.ui.components.FallbackNotice
 import com.example.animetracker.ui.components.AnimeGridCard
 import com.example.animetracker.ui.model.toHomeCardItem
 import com.example.animetracker.ui.theme.Bone
@@ -64,7 +68,12 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
     val isDiscoverLoading by viewModel.isDiscoverLoading.collectAsState()
     val discoverError by viewModel.discoverError.collectAsState()
 
+    val mangaTitleResults by viewModel.mangaTitleResults.collectAsState()
+    val mangaLibrary by viewModel.mangaLibrary.collectAsState()
+    val addedMangaKeys = remember(mangaLibrary) { mangaLibrary.map { it.mangaDexId }.toSet() }
+
     val localByAniListId by viewModel.localByAniListId.collectAsState()
+    val usingFallback by viewModel.searchUsingFallback.collectAsState()
 
     val isSearching = query.isNotBlank()
 
@@ -129,6 +138,24 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                         }
                     },
                     singleLine = true
+                )
+            }
+
+            if (usingFallback) {
+                FallbackNotice(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            }
+
+            // Manga titles from AniList — only ever populated when the
+            // Settings "Show AniList Manga" toggle is on, and only while
+            // actively typing a search (never shown browsing genres).
+            // Deliberately just a row of tappable title chips, not a full
+            // poster grid, per how this feature is meant to work: titles
+            // only, tap to save into the Manga list in Settings.
+            if (isSearching && mangaTitleResults.isNotEmpty()) {
+                MangaTitleStrip(
+                    results = mangaTitleResults,
+                    addedKeys = addedMangaKeys,
+                    onTap = { viewModel.addAniListMangaToLibrary(it) }
                 )
             }
 
@@ -231,6 +258,57 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Horizontally scrolling row of manga title chips — titles only, per the
+ * Settings toggle's design: no covers, no synopsis, just tap a title to
+ * save it into the Manga list. A checkmark replaces the chip's leading
+ * dot once that title's already in the library, so re-tapping is a
+ * harmless no-op-looking confirmation rather than silently doing nothing.
+ */
+@Composable
+private fun MangaTitleStrip(
+    results: List<AniListMedia>,
+    addedKeys: Set<String>,
+    onTap: (AniListMedia) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        results.forEach { media ->
+            val isAdded = "anilist:${media.id}" in addedKeys
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .clickable(enabled = !isAdded) { onTap(media) }
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                if (isAdded) {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = "Added to Manga list",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
+                Text(
+                    text = media.displayTitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isAdded) MaterialTheme.colorScheme.primary else Bone,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
