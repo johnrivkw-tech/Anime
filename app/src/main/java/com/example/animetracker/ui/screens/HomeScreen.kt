@@ -44,6 +44,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -100,7 +101,14 @@ fun HomeScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}) {
     val planCount = allAnime.count { it.status == AnimeStatus.PLAN_TO_WATCH }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
+        // Nested inside the app-level Scaffold in MainActivity, which
+        // already reserves space for the floating bottom nav bar. Leaving
+        // this Scaffold's default contentWindowInsets in place reserved
+        // the system nav-bar area a *second* time, which is what left the
+        // large empty gap at the bottom of My List — zeroing it out here
+        // matches the fix already applied in Settings.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         Column(
             modifier = Modifier
