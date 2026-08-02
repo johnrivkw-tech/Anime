@@ -153,7 +153,10 @@ private fun MainAppContent(viewModel: AnimeViewModel) {
                 )
             }
             composable(Destination.MY_LIST.route) {
-                HomeScreen(viewModel = viewModel)
+                HomeScreen(
+                    viewModel = viewModel,
+                    onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") }
+                )
             }
             composable(Destination.SCHEDULE.route) {
                 ScheduleScreen(
