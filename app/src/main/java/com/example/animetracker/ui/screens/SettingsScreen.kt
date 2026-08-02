@@ -200,47 +200,83 @@ fun SettingsScreen(viewModel: AnimeViewModel) {
 
 @Composable
 private fun SettingsMenuList(viewModel: AnimeViewModel, onSectionSelected: (SettingsSection) -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 16.dp)
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Soft radial glow behind the profile card instead of a flat black
+        // backdrop — this is what was making the whole screen read as
+        // "plain": every card sat on identical solid black with nothing
+        // to anchor the eye at the top.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(280.dp)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                            Color.Transparent
+                        ),
+                        radius = 900f
+                    )
+                )
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+        ) {
+            ProfileHeaderCard(viewModel)
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            SectionLabel("Preferences")
+            SettingsGroupCard(
+                sections = listOf(
+                    SettingsSection.APPEARANCE,
+                    SettingsSection.CONTENT_FILTERS,
+                    SettingsSection.NOTIFICATIONS,
+                    SettingsSection.BEHAVIOR,
+                    SettingsSection.AI_PERSONALITY
+                ),
+                onSectionSelected = onSectionSelected
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            SectionLabel("App")
+            SettingsGroupCard(
+                sections = listOf(SettingsSection.ANILIST_SYNC, SettingsSection.DATA_STORAGE, SettingsSection.ABOUT),
+                onSectionSelected = onSectionSelected
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+/** Small uppercase section label with a colored accent bar — replaces the
+ *  plain gray caption text with something that actually reads as a header. */
+@Composable
+private fun SectionLabel(text: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(start = 4.dp, bottom = 10.dp)
     ) {
-        ProfileHeaderCard(viewModel)
-
-        Spacer(modifier = Modifier.height(20.dp))
-
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(14.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(MaterialTheme.colorScheme.primary)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "Preferences",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+            text = text.uppercase(),
+            style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 1.2.sp),
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        SettingsGroupCard(
-            sections = listOf(
-                SettingsSection.APPEARANCE,
-                SettingsSection.CONTENT_FILTERS,
-                SettingsSection.NOTIFICATIONS,
-                SettingsSection.BEHAVIOR,
-                SettingsSection.AI_PERSONALITY
-            ),
-            onSectionSelected = onSectionSelected
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Text(
-            text = "App",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
-        )
-        SettingsGroupCard(
-            sections = listOf(SettingsSection.ANILIST_SYNC, SettingsSection.DATA_STORAGE, SettingsSection.ABOUT),
-            onSectionSelected = onSectionSelected
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -252,11 +288,25 @@ private fun SettingsGroupCard(
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.fillMaxWidth()
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(20.dp)
+            )
     ) {
         Column {
             sections.forEachIndexed { index, section ->
-                SettingsMenuRow(section = section, onClick = { onSectionSelected(section) })
+                SettingsMenuRow(
+                    section = section,
+                    // Alternating primary/secondary icon badges instead of
+                    // one flat color for every row — a small touch, but it's
+                    // what makes the list feel designed instead of generated.
+                    accent = if (index % 2 == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                    onClick = { onSectionSelected(section) }
+                )
                 if (index != sections.lastIndex) {
                     Box(
                         modifier = Modifier
@@ -282,7 +332,19 @@ private fun ProfileHeaderCard(viewModel: AnimeViewModel) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.fillMaxWidth()
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.dp,
+                brush = Brush.linearGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
+                    )
+                ),
+                shape = RoundedCornerShape(20.dp)
+            )
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -292,7 +354,16 @@ private fun ProfileHeaderCard(viewModel: AnimeViewModel) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .border(
+                        width = 2.dp,
+                        brush = Brush.linearGradient(
+                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
+                        ),
+                        shape = CircleShape
+                    )
+                    .padding(3.dp)
                     .clip(CircleShape)
                     .background(
                         Brush.linearGradient(
@@ -307,7 +378,7 @@ private fun ProfileHeaderCard(viewModel: AnimeViewModel) {
                         contentDescription = "Your avatar",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .size(56.dp)
+                            .fillMaxSize()
                             .clip(CircleShape)
                     )
                 } else {
@@ -371,7 +442,7 @@ private fun formatJoinedDate(millis: Long): String =
 private fun formatBerries(amount: Long): String = String.format(Locale.US, "%,d", amount)
 
 @Composable
-private fun SettingsMenuRow(section: SettingsSection, onClick: () -> Unit) {
+private fun SettingsMenuRow(section: SettingsSection, accent: Color, onClick: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -383,13 +454,13 @@ private fun SettingsMenuRow(section: SettingsSection, onClick: () -> Unit) {
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                .background(accent.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = section.icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = accent,
                 modifier = Modifier.size(20.dp)
             )
         }
