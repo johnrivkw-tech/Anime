@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.animetracker.ui.components.AnimeSectionRow
+import com.example.animetracker.ui.components.FallbackNotice
 import com.example.animetracker.ui.components.FeaturedBanner
 import com.example.animetracker.ui.model.toHomeCardItem
 import com.example.animetracker.viewmodel.AnimeViewModel
@@ -44,6 +45,7 @@ fun HomeFeedScreen(
     val localByAniListId by viewModel.localByAniListId.collectAsState()
     val isLoading by viewModel.isHomeFeedLoading.collectAsState()
     val error by viewModel.homeFeedError.collectAsState()
+    val usingFallback by viewModel.homeFeedUsingFallback.collectAsState()
     val aiRecommendations by viewModel.aiRecommendations.collectAsState()
     val isLoadingAiRecs by viewModel.isLoadingAiRecommendations.collectAsState()
     val aiRecsError by viewModel.aiRecommendationsError.collectAsState()
@@ -94,6 +96,11 @@ fun HomeFeedScreen(
                     .padding(paddingValues),
                 contentPadding = PaddingValues(vertical = 0.dp)
             ) {
+                if (usingFallback) {
+                    item {
+                        FallbackNotice(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                    }
+                }
                 item {
                     FeaturedBanner(
                         items = trendingItems.take(5),
