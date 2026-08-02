@@ -617,7 +617,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     fun handleAniListAuthRedirect(uri: Uri) {
         val code = aniListSyncRepository.parseRedirectCode(uri)
         if (code == null) {
-            _aniListSyncMessage.value = "AniList login didn't go through. Please try again."
+            _aniListSyncMessage.value = "AniList login didn't go through: no code came back in the redirect. Please try again."
             return
         }
         viewModelScope.launch {
@@ -640,8 +640,8 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                         aniListAuthPrefs.clear()
                         _aniListSyncMessage.value = "Logged in, but couldn't load your AniList profile. Please try again."
                     }
-            }.onFailure {
-                _aniListSyncMessage.value = "AniList login didn't go through. Please try again."
+            }.onFailure { error ->
+                _aniListSyncMessage.value = "AniList login didn't go through: ${error.message ?: "unknown error"}"
             }
         }
     }
