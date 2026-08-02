@@ -1,5 +1,7 @@
 package com.example.animetracker.data.network
 
+import java.util.concurrent.TimeUnit
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
@@ -26,9 +28,22 @@ interface GeminiApiService {
 object GeminiApi {
     private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/"
 
+    // Retrofit's default OkHttpClient uses a 10-second read timeout, which
+    // is fine for the AniList calls elsewhere in the app but way too short
+    // here — Gemini has to actually reason through the user's whole watch
+    // history and generate 8 recommendations as structured JSON, which
+    // routinely takes longer than that. Without this, "AI Picks" was
+    // reliably failing with a timeout on real requests, not just slow ones.
+    private val httpClient = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
+
     val service: GeminiApiService by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
+            .client(httpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(GeminiApiService::class.java)
