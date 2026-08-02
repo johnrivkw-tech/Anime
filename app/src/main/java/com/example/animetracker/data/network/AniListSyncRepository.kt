@@ -70,35 +70,46 @@ private val SAVE_MEDIA_LIST_ENTRY_MUTATION = """
 class AniListSyncRepository {
 
     /**
-     * The URL to open in a browser to start login. Uses AniList's *implicit
-     * grant* flow (`response_type=token`): the user logs in and approves
-     * the app on AniList's own site, then AniList redirects straight back
-     * to [ANILIST_REDIRECT_URI] with the access token in the URL fragment —
-     * no server-side token exchange or client secret needed.
+     * The URL to open in a browser to start login. Uses the *Authorization
+     * Code Grant* (`response_type=code`): the user logs in and approves the
+     * app on AniList's own site, then AniList redirects back to
+     * [ANILIST_REDIRECT_URI] with a one-time `code` in the query string,
+     * which [exchangeCodeForToken] trades for an access token.
+     *
+     * AniList's docs also describe an *implicit grant* (`response_type=token`,
+     * token comes straight back in the redirect, no exchange needed) — that
+     * would be simpler for a client-only app like this one, but in practice
+     * AniList's server currently rejects it before the login screen even
+     * loads, so the Authorization Code Grant is what actually works.
      */
     fun buildAuthorizationUrl(clientId: String): String =
         "https://anilist.co/api/v2/oauth/authorize" +
             "?client_id=$clientId" +
             "&redirect_uri=$ANILIST_REDIRECT_URI" +
-            "&response_type=token"
+            "&response_type=code"
+
+    /** Pulls the one-time authorization `code` out of the OAuth redirect's query string. */
+    fun parseRedirectCode(uri: Uri): String? = uri.getQueryParameter("code")
 
     /**
-     * Pulls the access token out of the OAuth redirect. AniList puts it in
-     * the URL *fragment* (`#access_token=...&expires_in=...`) rather than
-     * the query string, so [Uri.getFragment] is what has it, not
-     * [Uri.getQueryParameter].
+     * Trades the one-time `code` from [parseRedirectCode] for a real access
+     * token by POSTing to AniList's token endpoint.
      */
-    fun parseRedirect(uri: Uri): AniListTokenResult? {
-        val fragment = uri.fragment ?: return null
-        val params = fragment.split("&")
-            .mapNotNull { part ->
-                val idx = part.indexOf('=')
-                if (idx <= 0) null else part.substring(0, idx) to part.substring(idx + 1)
-            }
-            .toMap()
-        val token = params["access_token"] ?: return null
-        val expiresIn = params["expires_in"]?.toLongOrNull() ?: (365L * 24 * 60 * 60)
-        return AniListTokenResult(token, expiresIn)
+    suspend fun exchangeCodeForToken(
+        clientId: String,
+        clientSecret: String,
+        code: String
+    ): Result<AniListTokenResult> = safeCall {
+        val response = AniListOAuthApi.service.exchangeToken(
+            AniListTokenRequest(
+                clientId = clientId,
+                clientSecret = clientSecret,
+                redirectUri = ANILIST_REDIRECT_URI,
+                code = code
+            )
+        )
+        val token = response.accessToken ?: throw IllegalStateException("AniList didn't return an access token")
+        AniListTokenResult(token, response.expiresIn ?: (365L * 24 * 60 * 60))
     }
 
     suspend fun fetchViewer(accessToken: String): Result<AniListViewer> = safeCall {
