@@ -74,7 +74,7 @@ import com.example.animetracker.viewmodel.AnimeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(viewModel: AnimeViewModel) {
+fun HomeScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}) {
     val animeList by viewModel.filteredAnime.collectAsState()
     val allAnime by viewModel.allLocalAnime.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -276,6 +276,17 @@ fun HomeScreen(viewModel: AnimeViewModel) {
                     MyListPosterCard(
                         anime = anime,
                         onClick = {
+                            val aniListId = anime.aniListId
+                            if (aniListId != null) {
+                                onAnimeClick(aniListId)
+                            } else {
+                                // Manually-added titles with no AniList link have no
+                                // details page to show, so fall back to editing.
+                                animeBeingEdited = anime
+                                showDialog = true
+                            }
+                        },
+                        onEditClick = {
                             animeBeingEdited = anime
                             showDialog = true
                         },
@@ -336,8 +347,9 @@ fun HomeScreen(viewModel: AnimeViewModel) {
 
 /**
  * My List grid tile: just the poster art with the title in small text
- * underneath, nothing else. Tap opens the edit dialog (status/episodes/
- * rating all live there) and long-press asks to remove it — the old
+ * underneath, nothing else. Tap opens that title's details screen,
+ * the "⋮" menu's Edit item opens the edit dialog (status/episodes/
+ * rating all live there), and long-press asks to remove it — the old
  * wide row-style card doesn't fit a multi-column grid and was wrapping
  * its text one letter per line.
  */
@@ -346,6 +358,7 @@ fun HomeScreen(viewModel: AnimeViewModel) {
 private fun MyListPosterCard(
     anime: Anime,
     onClick: () -> Unit,
+    onEditClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
     Column(
@@ -438,7 +451,7 @@ private fun MyListPosterCard(
                         leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null, tint = Smoke) },
                         onClick = {
                             menuExpanded = false
-                            onClick()
+                            onEditClick()
                         }
                     )
                     DropdownMenuItem(
