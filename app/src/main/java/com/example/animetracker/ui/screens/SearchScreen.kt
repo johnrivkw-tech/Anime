@@ -1,3 +1,4 @@
+
 package com.example.animetracker.ui.screens
 
 import androidx.compose.foundation.background
@@ -33,7 +34,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -46,6 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.animetracker.data.network.ANILIST_GENRES
+import com.example.animetracker.data.network.ANILIST_HENTAI_GENRE
 import com.example.animetracker.data.network.AniListMedia
 import com.example.animetracker.ui.components.AdaptiveAnimeGrid
 import com.example.animetracker.ui.components.FallbackNotice
@@ -75,6 +79,25 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
     val localByAniListId by viewModel.localByAniListId.collectAsState()
     val usingFallback by viewModel.searchUsingFallback.collectAsState()
 
+    // matureContentEnabled is already the combined "age verified as 18+ AND
+    // opted in to mature content" flag the rest of the app gates adult
+    // content behind — reusing it here means Hentai only ever appears in
+    // the genre strip once both conditions are true, and disappears again
+    // immediately (list rebuilds, selection included) if the user turns
+    // either one off.
+    val matureContentEnabled by viewModel.matureContentEnabled.collectAsState()
+    val searchGenres = remember(matureContentEnabled) {
+        if (matureContentEnabled) ANILIST_GENRES + ANILIST_HENTAI_GENRE else ANILIST_GENRES
+    }
+    // If mature content gets turned off from Settings while Hentai is the
+    // active selection, drop back to "All Genres" instead of leaving the
+    // filter silently pinned to a tab that's no longer visible anywhere.
+    LaunchedEffect(matureContentEnabled) {
+        if (!matureContentEnabled && genre == ANILIST_HENTAI_GENRE) {
+            viewModel.setDiscoverGenre(null)
+        }
+    }
+
     val isSearching = query.isNotBlank()
 
     val catalogItems = remember(catalogResults, localByAniListId) {
@@ -85,7 +108,14 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
+        // Nested inside the app-level Scaffold in MainActivity, which
+        // already reserves space for the floating bottom nav bar. Leaving
+        // this Scaffold's default contentWindowInsets in place reserved
+        // the system nav-bar area a *second* time, which is what left the
+        // large empty gap at the bottom of Search — zeroing it out here
+        // matches the fix already applied in Settings.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -168,7 +198,7 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
             // the strip hides itself the same way the old Filter button did.
             if (!isSearching) {
                 GenreFilterTabs(
-                    genres = ANILIST_GENRES,
+                    genres = searchGenres,
                     selected = genre,
                     onSelect = viewModel::setDiscoverGenre
                 )
