@@ -38,6 +38,7 @@ jobs:
         run: |
           echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> local.properties
           echo "ANILIST_CLIENT_ID=${{ secrets.ANILIST_CLIENT_ID }}" >> local.properties
+          echo "ANILIST_CLIENT_SECRET=${{ secrets.ANILIST_CLIENT_SECRET }}" >> local.properties
 
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
