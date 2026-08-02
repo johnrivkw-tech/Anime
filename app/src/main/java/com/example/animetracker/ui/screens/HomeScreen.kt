@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -203,95 +205,105 @@ fun HomeScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}) {
 
             val isFiltering = searchQuery.isNotEmpty() || statusFilter != null
 
-            if (animeList.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.radialGradient(
-                                        listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.20f), MaterialTheme.colorScheme.surface)
+            // BoxWithConstraints (not a plain weight(1f) Box) so we know the
+            // actual available height and can cap the grid to it — letting
+            // the grid shrink to its content when there's too little to
+            // fill the screen, instead of forcing it to claim all the
+            // leftover space and leaving dead background below the last row.
+            BoxWithConstraints(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                val availableHeight = maxHeight
+                if (animeList.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.radialGradient(
+                                            listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.20f), MaterialTheme.colorScheme.surface)
+                                        )
                                     )
-                                )
-                                .padding(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.VideoLibrary,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.width(40.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = if (isFiltering) "No matches" else "Your watchlist is empty",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Bone
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = if (isFiltering) {
-                                "Try a different search or filter"
-                            } else {
-                                "Search for a title and set its status to add it here"
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Smoke
-                        )
-                        if (!isFiltering) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            TextButton(
-                                onClick = {
-                                    animeBeingEdited = null
-                                    showDialog = true
-                                }
+                                    .padding(24.dp)
                             ) {
-                                Text(
-                                    text = "Or add a title manually",
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Bold
+                                Icon(
+                                    imageVector = Icons.Filled.VideoLibrary,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.width(40.dp)
                                 )
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = if (isFiltering) "No matches" else "Your watchlist is empty",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Bone
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = if (isFiltering) {
+                                    "Try a different search or filter"
+                                } else {
+                                    "Search for a title and set its status to add it here"
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Smoke
+                            )
+                            if (!isFiltering) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                TextButton(
+                                    onClick = {
+                                        animeBeingEdited = null
+                                        showDialog = true
+                                    }
+                                ) {
+                                    Text(
+                                        text = "Or add a title manually",
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                     }
-                }
-            } else {
-                AdaptiveAnimeGrid(
-                    items = animeList,
-                    key = { it.id },
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 20.dp),
-                    horizontalSpacing = 10.dp,
-                    verticalSpacing = 18.dp
-                ) { anime ->
-                    MyListPosterCard(
-                        anime = anime,
-                        onClick = {
-                            val aniListId = anime.aniListId
-                            if (aniListId != null) {
-                                onAnimeClick(aniListId)
-                            } else {
-                                // Manually-added titles with no AniList link have no
-                                // details page to show, so fall back to editing.
+                } else {
+                    AdaptiveAnimeGrid(
+                        items = animeList,
+                        key = { it.id },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = availableHeight),
+                        contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 20.dp),
+                        horizontalSpacing = 10.dp,
+                        verticalSpacing = 18.dp
+                    ) { anime ->
+                        MyListPosterCard(
+                            anime = anime,
+                            onClick = {
+                                val aniListId = anime.aniListId
+                                if (aniListId != null) {
+                                    onAnimeClick(aniListId)
+                                } else {
+                                    // Manually-added titles with no AniList link have no
+                                    // details page to show, so fall back to editing.
+                                    animeBeingEdited = anime
+                                    showDialog = true
+                                }
+                            },
+                            onEditClick = {
                                 animeBeingEdited = anime
                                 showDialog = true
-                            }
-                        },
-                        onEditClick = {
-                            animeBeingEdited = anime
-                            showDialog = true
-                        },
-                        onLongClick = { animePendingDelete = anime }
-                    )
+                            },
+                            onLongClick = { animePendingDelete = anime }
+                        )
+                    }
                 }
             }
         }
