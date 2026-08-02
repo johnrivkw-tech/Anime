@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -134,6 +135,13 @@ fun SettingsScreen(viewModel: AnimeViewModel) {
     val reduceMotion by viewModel.reduceMotion.collectAsState()
 
     Scaffold(
+        // This Scaffold is nested inside the app-level one in MainActivity,
+        // which already pads every screen for the floating bottom nav bar.
+        // Scaffold's default contentWindowInsets would reserve the system
+        // nav-bar area a *second* time here, which is what was leaving that
+        // large empty gap at the bottom of Settings — zeroing it out here
+        // lets the single outer reservation be the only one.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = { Text(activeSection?.title ?: "Settings", fontWeight = FontWeight.Bold) },
