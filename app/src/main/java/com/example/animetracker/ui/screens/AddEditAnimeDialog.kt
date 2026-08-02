@@ -111,7 +111,17 @@ fun AddEditAnimeDialog(
                     OutlinedTextField(
                         value = totalEpisodes,
                         onValueChange = { input ->
-                            if (input.all { it.isDigit() }) totalEpisodes = input
+                            if (input.all { it.isDigit() }) {
+                                totalEpisodes = input
+                                // If Completed was already picked and someone fills
+                                // in (or changes) the total afterward, keep Watched
+                                // matching it rather than leaving a stale number.
+                                if (status == AnimeStatus.COMPLETED) {
+                                    input.toIntOrNull()?.let { total ->
+                                        if (total > 0) episodesWatched = total.toString()
+                                    }
+                                }
+                            }
                         },
                         label = { Text("Total (optional)") },
                         singleLine = true,
@@ -133,7 +143,19 @@ fun AddEditAnimeDialog(
                     AnimeStatus.entries.forEach { option ->
                         FilterChip(
                             selected = status == option,
-                            onClick = { status = option },
+                            onClick = {
+                                status = option
+                                // Marking something Completed almost always means
+                                // "I watched all of it" — auto-fill Watched to match
+                                // Total so people don't have to type it in by hand.
+                                // Only kicks in when a total is actually known; if
+                                // Total is blank there's nothing to fill in to.
+                                if (option == AnimeStatus.COMPLETED) {
+                                    totalEpisodes.toIntOrNull()?.let { total ->
+                                        if (total > 0) episodesWatched = total.toString()
+                                    }
+                                }
+                            },
                             label = { Text(option.label) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
