@@ -39,6 +39,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.FileDownload
@@ -122,6 +123,7 @@ private enum class SettingsSection(
     NOTIFICATIONS("Notifications", "Reminders and alerts", Icons.Filled.NotificationsActive),
     BEHAVIOR("Playback & Behavior", "Motion, haptics, data usage", Icons.Filled.Tune),
     AI_PERSONALITY("AI Personality", "Customize how the AI talks to you", Icons.Filled.SmartToy),
+    MANGA("Manga", "Show AniList manga in search", Icons.Filled.AutoStories),
     ANILIST_SYNC("AniList Sync", "Log in and sync your list", Icons.Filled.Sync),
     DATA_STORAGE("Data & Storage", "Library stats and reset options", Icons.Filled.Storage),
     ABOUT("About Rei", "Version, credits, and sharing", Icons.Filled.Info)
@@ -188,6 +190,7 @@ fun SettingsScreen(viewModel: AnimeViewModel) {
                         SettingsSection.NOTIFICATIONS -> NotificationsTab(viewModel)
                         SettingsSection.BEHAVIOR -> BehaviorTab(viewModel)
                         SettingsSection.AI_PERSONALITY -> AiPersonalityTab(viewModel)
+                        SettingsSection.MANGA -> MangaTab(viewModel)
                         SettingsSection.ANILIST_SYNC -> AniListSyncTab(viewModel)
                         SettingsSection.DATA_STORAGE -> DataStorageTab(viewModel)
                         SettingsSection.ABOUT -> AboutTab()
@@ -237,7 +240,8 @@ private fun SettingsMenuList(viewModel: AnimeViewModel, onSectionSelected: (Sett
                     SettingsSection.CONTENT_FILTERS,
                     SettingsSection.NOTIFICATIONS,
                     SettingsSection.BEHAVIOR,
-                    SettingsSection.AI_PERSONALITY
+                    SettingsSection.AI_PERSONALITY,
+                    SettingsSection.MANGA
                 ),
                 onSectionSelected = onSectionSelected
             )
@@ -735,6 +739,90 @@ private fun AiPersonalityTab(viewModel: AnimeViewModel) {
             onClick = { viewModel.resetAiPersonality() }
         ) {
             Text("Reset to default")
+        }
+    }
+}
+
+@Composable
+private fun MangaTab(viewModel: AnimeViewModel) {
+    val showAniListManga by viewModel.showAniListManga.collectAsState()
+    val mangaLibrary by viewModel.mangaLibrary.collectAsState()
+
+    Text(
+        text = "Manga",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold
+    )
+    Text(
+        text = "Off by default. Turn this on and manga titles from AniList will " +
+            "show up when you manually search on the Search tab — tap a title " +
+            "there to save it here.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+    )
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        SettingsSwitchRow(
+            viewModel = viewModel,
+            title = "Show AniList Manga",
+            subtitle = "Include manga titles when searching.",
+            checked = showAniListManga,
+            onCheckedChange = { viewModel.setShowAniListManga(it) }
+        )
+    }
+
+    if (showAniListManga) {
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = "Manga",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (mangaLibrary.isEmpty()) {
+            Text(
+                text = "Nothing saved yet — search for a manga title and tap it to add it here.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column {
+                    mangaLibrary.forEachIndexed { index, manga ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.removeMangaFromLibrary(manga) }
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = manga.title,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        if (index != mangaLibrary.lastIndex) SettingsDivider()
+                    }
+                }
+            }
+            Text(
+                text = "Tap a title to remove it.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
     }
 }
