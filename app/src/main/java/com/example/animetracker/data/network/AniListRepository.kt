@@ -13,6 +13,16 @@ val ANILIST_GENRES = listOf(
     "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Thriller"
 )
 
+/**
+ * AniList's Hentai genre — kept out of [ANILIST_GENRES] on purpose so it
+ * never shows up in the Discover tab strip by default. The caller (Search
+ * screen) is responsible for appending this only once the user has both
+ * verified their age as 18+ and turned on mature content in Settings
+ * (i.e. only once `matureContentEnabled` is true), same gate the rest of
+ * the app already uses for adult content.
+ */
+const val ANILIST_HENTAI_GENRE = "Hentai"
+
 // GraphQL field selection shared by every query below, aliasing `status` to
 // `rawStatus` so AniListMedia can expose its own human-readable `status`.
 // Visibility is `internal` (not `private`) so AniListSyncRepository can
