@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -23,7 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -42,11 +42,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.animetracker.R
 import com.example.animetracker.ui.model.HomeCardItem
@@ -58,7 +61,6 @@ fun FeaturedBanner(
     items: List<HomeCardItem>,
     onClick: (HomeCardItem) -> Unit,
     onAiClick: () -> Unit,
-    onReadingClick: () -> Unit,
     onGamesClick: () -> Unit,
     onProfileClick: () -> Unit,
     profileAvatarPath: String? = null,
@@ -249,27 +251,38 @@ fun FeaturedBanner(
                     }
                     DropdownMenu(
                         expanded = menuExpanded,
-                        onDismissRequest = { menuExpanded = false }
+                        onDismissRequest = { menuExpanded = false },
+                        shape = RoundedCornerShape(20.dp),
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        tonalElevation = 0.dp,
+                        shadowElevation = 12.dp,
+                        modifier = Modifier
+                            .width(230.dp)
+                            .padding(vertical = 4.dp)
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("Lena AI") },
-                            leadingIcon = { Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
+                        Text(
+                            text = "QUICK ACCESS",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            color = Smoke,
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp)
+                        )
+                        HamburgerMenuItem(
+                            title = "Lena AI",
+                            subtitle = "Chat for recommendations",
+                            icon = Icons.Filled.AutoAwesome,
+                            iconTint = MaterialTheme.colorScheme.secondary,
                             onClick = {
                                 menuExpanded = false
                                 onAiClick()
                             }
                         )
-                        DropdownMenuItem(
-                            text = { Text("Reading") },
-                            leadingIcon = { Icon(Icons.Filled.MenuBook, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                            onClick = {
-                                menuExpanded = false
-                                onReadingClick()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Games") },
-                            leadingIcon = { Icon(Icons.Filled.Casino, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
+                        HamburgerMenuItem(
+                            title = "Games",
+                            subtitle = "One Piece gacha & more",
+                            icon = Icons.Filled.Casino,
+                            iconTint = MaterialTheme.colorScheme.primary,
                             onClick = {
                                 menuExpanded = false
                                 onGamesClick()
@@ -308,4 +321,54 @@ fun FeaturedBanner(
             }
         }
     }
+}
+
+/**
+ * A single row in the hamburger menu — icon in a soft-tinted circular
+ * badge, bold title, small subtitle underneath. Replaces the default
+ * plain-text [DropdownMenuItem] look (which read as barely-there once
+ * "Reading" was removed and only two items were left) with something that
+ * actually looks designed at a glance, matching the title+subtitle row
+ * style already used throughout Settings.
+ */
+@Composable
+private fun HamburgerMenuItem(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    iconTint: Color,
+    onClick: () -> Unit
+) {
+    DropdownMenuItem(
+        text = {
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Bone
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Smoke,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        },
+        leadingIcon = {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(iconTint.copy(alpha = 0.18f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
+            }
+        },
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+        onClick = onClick
+    )
 }
