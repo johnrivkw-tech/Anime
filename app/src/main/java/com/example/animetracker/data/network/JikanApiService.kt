@@ -12,10 +12,13 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Jikan is a free, keyless REST wrapper around MyAnimeList
- * (https://api.jikan.moe/v4) — used here just for character search, since
- * MAL's character database (and its own "favorites" counts) is what backs
- * the Profile screen's "Favorite Characters" picker, separate from the
- * AniList-backed anime search elsewhere in the app.
+ * (https://api.jikan.moe/v4) — originally used just for character search,
+ * now doubling as an emergency fallback data source for Home/Search/
+ * Schedule when AniList itself is unavailable (rare, but AniList does
+ * occasionally disable its own API during stability issues — see
+ * [AniListRepository]'s doc comment). [JikanRepository] only reaches for
+ * these when an AniList call has already failed, never as the default
+ * path.
  */
 interface JikanApiService {
 
@@ -24,6 +27,45 @@ interface JikanApiService {
         @Query("q") query: String,
         @Query("limit") limit: Int = 15
     ): JikanCharacterSearchResponse
+
+    @GET("anime")
+    suspend fun searchAnime(
+        @Query("q") query: String,
+        @Query("limit") limit: Int = 10,
+        @Query("sfw") sfw: Boolean? = null
+    ): JikanAnimeListResponse
+
+    /** [genreIds] is a comma-separated list of Jikan/MAL numeric genre IDs, per [JIKAN_GENRE_IDS]. */
+    @GET("anime")
+    suspend fun getAnimeByGenre(
+        @Query("genres") genreIds: String,
+        @Query("order_by") orderBy: String = "popularity",
+        @Query("sort") sort: String = "asc",
+        @Query("limit") limit: Int = 20,
+        @Query("sfw") sfw: Boolean? = null
+    ): JikanAnimeListResponse
+
+    /** [filter] is one of Jikan's top-anime filters: airing, upcoming, bypopularity, favorite — or null for plain top-by-score. */
+    @GET("top/anime")
+    suspend fun getTopAnime(
+        @Query("filter") filter: String? = null,
+        @Query("limit") limit: Int = 10,
+        @Query("sfw") sfw: Boolean? = null
+    ): JikanAnimeListResponse
+
+    @GET("seasons/now")
+    suspend fun getCurrentSeason(
+        @Query("limit") limit: Int = 10,
+        @Query("sfw") sfw: Boolean? = null
+    ): JikanAnimeListResponse
+
+    /** [dayFilter] is a lowercase weekday, e.g. "monday" — Jikan's schedule is by day-of-week broadcast slot, not an exact per-episode timestamp the way AniList's is. */
+    @GET("schedules")
+    suspend fun getSchedule(
+        @Query("filter") dayFilter: String,
+        @Query("limit") limit: Int = 25,
+        @Query("sfw") sfw: Boolean? = null
+    ): JikanAnimeListResponse
 }
 
 /** Jikan/Cloudflare sometimes reject requests that don't look like they came from a real client. */
