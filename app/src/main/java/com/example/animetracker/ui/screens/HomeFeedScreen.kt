@@ -31,7 +31,6 @@ fun HomeFeedScreen(
     viewModel: AnimeViewModel,
     onAnimeClick: (Int) -> Unit,
     onChatClick: () -> Unit,
-    onReadingClick: () -> Unit,
     onGamesClick: () -> Unit,
     onProfileClick: () -> Unit
 ) {
@@ -100,7 +99,6 @@ fun HomeFeedScreen(
                         items = trendingItems.take(5),
                         onClick = { item -> item.aniListId?.let(onAnimeClick) },
                         onAiClick = onChatClick,
-                        onReadingClick = onReadingClick,
                         onGamesClick = onGamesClick,
                         onProfileClick = onProfileClick,
                         profileAvatarPath = profileAvatarPath
