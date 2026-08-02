@@ -100,16 +100,24 @@ class AniListSyncRepository {
         clientSecret: String,
         code: String
     ): Result<AniListTokenResult> = safeCall {
-        val response = AniListOAuthApi.service.exchangeToken(
-            AniListTokenRequest(
-                clientId = clientId,
-                clientSecret = clientSecret,
-                redirectUri = ANILIST_REDIRECT_URI,
-                code = code
+        try {
+            val response = AniListOAuthApi.service.exchangeToken(
+                AniListTokenRequest(
+                    clientId = clientId,
+                    clientSecret = clientSecret,
+                    redirectUri = ANILIST_REDIRECT_URI,
+                    code = code
+                )
             )
-        )
-        val token = response.accessToken ?: throw IllegalStateException("AniList didn't return an access token")
-        AniListTokenResult(token, response.expiresIn ?: (365L * 24 * 60 * 60))
+            val token = response.accessToken ?: throw IllegalStateException("AniList didn't return an access token")
+            AniListTokenResult(token, response.expiresIn ?: (365L * 24 * 60 * 60))
+        } catch (e: retrofit2.HttpException) {
+            // Surface AniList's actual JSON error (e.g. "invalid_client") rather
+            // than just "HTTP 400" — this is what actually shows up in the app
+            // so it's diagnosable instead of a generic failure.
+            val body = e.response()?.errorBody()?.string()
+            throw IllegalStateException("AniList said: ${body ?: e.message()}")
+        }
     }
 
     suspend fun fetchViewer(accessToken: String): Result<AniListViewer> = safeCall {
