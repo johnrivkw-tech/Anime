@@ -609,31 +609,40 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     fun buildAniListAuthUrl(): String = aniListSyncRepository.buildAuthorizationUrl(BuildConfig.ANILIST_CLIENT_ID)
 
     /**
-     * Handles the `rei://anilist-auth#access_token=...` redirect once the
-     * user finishes logging in on AniList's site: saves the token, fetches
-     * their profile, and kicks off an initial list pull.
+     * Handles the `rei://anilist-auth?code=...` redirect once the user
+     * finishes logging in on AniList's site: exchanges the one-time code
+     * for an access token, saves it, fetches their profile, and kicks off
+     * an initial list pull.
      */
     fun handleAniListAuthRedirect(uri: Uri) {
-        val token = aniListSyncRepository.parseRedirect(uri)
-        if (token == null) {
+        val code = aniListSyncRepository.parseRedirectCode(uri)
+        if (code == null) {
             _aniListSyncMessage.value = "AniList login didn't go through. Please try again."
             return
         }
         viewModelScope.launch {
-            aniListAuthPrefs.saveSession(token.accessToken, token.expiresInSeconds)
-            aniListSyncRepository.fetchViewer(token.accessToken)
-                .onSuccess { viewer ->
-                    aniListAuthPrefs.saveProfile(viewer.id, viewer.name, viewer.avatar?.bestUrl)
-                    _aniListConnected.value = true
-                    _aniListUsername.value = viewer.name
-                    _aniListAvatarUrl.value = viewer.avatar?.bestUrl
-                    _aniListSyncMessage.value = "Connected as ${viewer.name}. Syncing your list…"
-                    syncAniListList()
-                }
-                .onFailure {
-                    aniListAuthPrefs.clear()
-                    _aniListSyncMessage.value = "Logged in, but couldn't load your AniList profile. Please try again."
-                }
+            aniListSyncRepository.exchangeCodeForToken(
+                clientId = BuildConfig.ANILIST_CLIENT_ID,
+                clientSecret = BuildConfig.ANILIST_CLIENT_SECRET,
+                code = code
+            ).onSuccess { token ->
+                aniListAuthPrefs.saveSession(token.accessToken, token.expiresInSeconds)
+                aniListSyncRepository.fetchViewer(token.accessToken)
+                    .onSuccess { viewer ->
+                        aniListAuthPrefs.saveProfile(viewer.id, viewer.name, viewer.avatar?.bestUrl)
+                        _aniListConnected.value = true
+                        _aniListUsername.value = viewer.name
+                        _aniListAvatarUrl.value = viewer.avatar?.bestUrl
+                        _aniListSyncMessage.value = "Connected as ${viewer.name}. Syncing your list…"
+                        syncAniListList()
+                    }
+                    .onFailure {
+                        aniListAuthPrefs.clear()
+                        _aniListSyncMessage.value = "Logged in, but couldn't load your AniList profile. Please try again."
+                    }
+            }.onFailure {
+                _aniListSyncMessage.value = "AniList login didn't go through. Please try again."
+            }
         }
     }
 
