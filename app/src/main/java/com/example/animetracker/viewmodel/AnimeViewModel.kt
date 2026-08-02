@@ -38,6 +38,7 @@ import com.example.animetracker.data.network.toAnimeStatus
 import com.example.animetracker.BuildConfig
 import com.example.animetracker.data.network.GeminiChatRepository
 import com.example.animetracker.data.network.GeminiRepository
+import com.example.animetracker.data.network.JikanRepository
 import com.example.animetracker.data.network.AniListCharacterNode
 import com.example.animetracker.data.network.MangaDexChapter
 import com.example.animetracker.data.network.MangaDexManga
@@ -83,6 +84,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private lateinit var lightNovelRepository: LightNovelRepository
     private lateinit var mangaRepository: MangaRepository
     private val aniListRepository = AniListRepository()
+    private val jikanRepository = JikanRepository()
     private val aniListSyncRepository = AniListSyncRepository()
     private val mangaDexRepository = MangaDexRepository()
     private val geminiRepository = GeminiRepository()
@@ -181,6 +183,10 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _homeFeedError = MutableStateFlow<String?>(null)
     val homeFeedError: StateFlow<String?> = _homeFeedError.asStateFlow()
 
+    /** True when one or more Home feed sections came from Jikan/MAL instead of AniList, because AniList itself was unreachable. */
+    private val _homeFeedUsingFallback = MutableStateFlow(false)
+    val homeFeedUsingFallback: StateFlow<Boolean> = _homeFeedUsingFallback.asStateFlow()
+
     // --- AI picks (Gemini), personalized from the local watchlist ---
     private val _aiRecommendations = MutableStateFlow<List<HomeCardItem>>(emptyList())
     val aiRecommendations: StateFlow<List<HomeCardItem>> = _aiRecommendations.asStateFlow()
@@ -257,6 +263,10 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _catalogError = MutableStateFlow<String?>(null)
     val catalogError: StateFlow<String?> = _catalogError.asStateFlow()
 
+    /** True when the Search tab's current results (typed search or genre browse) came from Jikan/MAL instead of AniList, because AniList itself was unreachable. */
+    private val _searchUsingFallback = MutableStateFlow(false)
+    val searchUsingFallback: StateFlow<Boolean> = _searchUsingFallback.asStateFlow()
+
     private var catalogJob: Job? = null
 
     // --- Search tab: AniList manga titles, gated by the Settings toggle ---
@@ -327,6 +337,10 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _scheduleError = MutableStateFlow<String?>(null)
     val scheduleError: StateFlow<String?> = _scheduleError.asStateFlow()
+
+    /** True when the current day's schedule came from Jikan/MAL's day-of-week broadcast data instead of AniList's exact airing times, because AniList itself was unreachable. */
+    private val _scheduleUsingFallback = MutableStateFlow(false)
+    val scheduleUsingFallback: StateFlow<Boolean> = _scheduleUsingFallback.asStateFlow()
 
     // --- Light novels tab ---
     val lightNovels: StateFlow<List<LightNovelEntity>>
@@ -891,15 +905,54 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             val newReleasesResult = aniListRepository.getNewReleases(includeMature)
             val recommendedResult = aniListRepository.getRecommended(includeMature)
 
-            trendingResult.onSuccess { _trending.value = it }
-            popularResult.onSuccess { _popularThisSeason.value = it }
-            topRatedResult.onSuccess { _topRated.value = it }
-            newReleasesResult.onSuccess { _newReleases.value = it }
-            recommendedResult.onSuccess { _recommended.value = it }
+            var usedFallback = false
 
-            val allFailed = listOf(trendingResult, popularResult, topRatedResult, newReleasesResult, recommendedResult)
-                .all { it.isFailure }
-            if (allFailed) {
+            trendingResult
+                .onSuccess { _trending.value = it }
+                .onFailure {
+                    jikanRepository.getTrending(includeMature).onSuccess { fallback ->
+                        _trending.value = fallback
+                        usedFallback = true
+                    }
+                }
+            popularResult
+                .onSuccess { _popularThisSeason.value = it }
+                .onFailure {
+                    jikanRepository.getPopularThisSeason(includeMature).onSuccess { fallback ->
+                        _popularThisSeason.value = fallback
+                        usedFallback = true
+                    }
+                }
+            topRatedResult
+                .onSuccess { _topRated.value = it }
+                .onFailure {
+                    jikanRepository.getTopRated(includeMature).onSuccess { fallback ->
+                        _topRated.value = fallback
+                        usedFallback = true
+                    }
+                }
+            newReleasesResult
+                .onSuccess { _newReleases.value = it }
+                .onFailure {
+                    jikanRepository.getNewReleases(includeMature).onSuccess { fallback ->
+                        _newReleases.value = fallback
+                        usedFallback = true
+                    }
+                }
+            recommendedResult
+                .onSuccess { _recommended.value = it }
+                .onFailure {
+                    jikanRepository.getRecommended(includeMature).onSuccess { fallback ->
+                        _recommended.value = fallback
+                        usedFallback = true
+                    }
+                }
+
+            _homeFeedUsingFallback.value = usedFallback
+
+            val stillEmpty = listOf(_trending.value, _popularThisSeason.value, _topRated.value, _newReleases.value, _recommended.value)
+                .all { it.isEmpty() }
+            if (stillEmpty) {
                 _homeFeedError.value = "Couldn't load your home feed. Check your connection and try again."
             }
 
@@ -1059,9 +1112,19 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             val dayEnd = date.plusDays(1).atStartOfDay(zone).toEpochSecond()
 
             aniListRepository.getAiringSchedule(dayStart, dayEnd)
-                .onSuccess { _scheduleEntries.value = it }
-                .onFailure { e ->
-                    _scheduleError.value = e.message ?: "Couldn't load the schedule. Check your connection and try again."
+                .onSuccess {
+                    _scheduleEntries.value = it
+                    _scheduleUsingFallback.value = false
+                }
+                .onFailure {
+                    jikanRepository.getAiringSchedule(date, includeMature = _matureContentEnabled.value)
+                        .onSuccess { fallback ->
+                            _scheduleEntries.value = fallback
+                            _scheduleUsingFallback.value = true
+                        }
+                        .onFailure { e ->
+                            _scheduleError.value = e.message ?: "Couldn't load the schedule. Check your connection and try again."
+                        }
                 }
 
             _isScheduleLoading.value = false
@@ -1370,8 +1433,21 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                 season = _discoverSeason.value,
                 seasonYear = _discoverYear.value,
                 includeMature = _matureContentEnabled.value
-            ).onSuccess { _discoverResults.value = it }
-                .onFailure { _discoverError.value = "Couldn't load results. Check your connection and try again." }
+            ).onSuccess {
+                _discoverResults.value = it
+                _searchUsingFallback.value = false
+            }.onFailure {
+                // Jikan has no season/year filter to match AniList's, just genre —
+                // best-effort: genre carries over, season/year narrowing is dropped.
+                jikanRepository.discoverByGenre(_discoverGenre.value, includeMature = _matureContentEnabled.value)
+                    .onSuccess { fallback ->
+                        _discoverResults.value = fallback
+                        _searchUsingFallback.value = true
+                    }
+                    .onFailure {
+                        _discoverError.value = "Couldn't load results. Check your connection and try again."
+                    }
+            }
             _isDiscoverLoading.value = false
         }
     }
@@ -1391,8 +1467,20 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                 _isCatalogSearching.value = true
                 _catalogError.value = null
                 aniListRepository.searchAnime(query, includeMature = _matureContentEnabled.value)
-                    .onSuccess { _catalogResults.value = it }
-                    .onFailure { _catalogError.value = "Couldn't reach the anime database. Check your connection." }
+                    .onSuccess {
+                        _catalogResults.value = it
+                        _searchUsingFallback.value = false
+                    }
+                    .onFailure {
+                        jikanRepository.searchAnime(query, includeMature = _matureContentEnabled.value)
+                            .onSuccess { fallback ->
+                                _catalogResults.value = fallback
+                                _searchUsingFallback.value = true
+                            }
+                            .onFailure {
+                                _catalogError.value = "Couldn't reach the anime database. Check your connection."
+                            }
+                    }
                 _isCatalogSearching.value = false
             }
         }
