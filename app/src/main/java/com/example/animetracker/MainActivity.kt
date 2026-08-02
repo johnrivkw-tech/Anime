@@ -168,8 +168,7 @@ private fun MainAppContent(viewModel: AnimeViewModel) {
             composable(Destination.SEARCH.route) {
                 SearchScreen(
                     viewModel = viewModel,
-                    onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") },
-                    onBack = { navController.popBackStack() }
+                    onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") }
                 )
             }
             composable(PROFILE_ROUTE) {
