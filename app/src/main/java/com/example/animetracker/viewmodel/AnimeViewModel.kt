@@ -1428,24 +1428,40 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         discoverJob = viewModelScope.launch {
             _isDiscoverLoading.value = true
             _discoverError.value = null
-            aniListRepository.discoverAnime(
-                genre = _discoverGenre.value,
+            val genreAtRequestTime = _discoverGenre.value
+            val result = aniListRepository.discoverAnime(
+                genre = genreAtRequestTime,
                 season = _discoverSeason.value,
                 seasonYear = _discoverYear.value,
                 includeMature = _matureContentEnabled.value
-            ).onSuccess {
-                _discoverResults.value = it
+            )
+            // A genre pick can come back *successful* with zero media on a
+            // transient AniList hiccup (no GraphQL error, just an empty
+            // page) — that used to short-circuit straight to "No anime
+            // match this genre" without ever trying the Jikan mirror,
+            // since the mirror only ran on an outright failure. Falling
+            // through here too means a flaky empty response gets one more
+            // chance to fill the grid instead of reading as a dead end.
+            val needsFallback = result.isFailure || result.getOrNull()?.isEmpty() == true
+            if (!needsFallback) {
+                _discoverResults.value = result.getOrDefault(emptyList())
                 _searchUsingFallback.value = false
-            }.onFailure {
+            } else {
                 // Jikan has no season/year filter to match AniList's, just genre —
                 // best-effort: genre carries over, season/year narrowing is dropped.
-                jikanRepository.discoverByGenre(_discoverGenre.value, includeMature = _matureContentEnabled.value)
+                jikanRepository.discoverByGenre(genreAtRequestTime, includeMature = _matureContentEnabled.value)
                     .onSuccess { fallback ->
                         _discoverResults.value = fallback
                         _searchUsingFallback.value = true
                     }
                     .onFailure {
-                        _discoverError.value = "Couldn't load results. Check your connection and try again."
+                        if (result.isFailure) {
+                            _discoverError.value = "Couldn't load results. Check your connection and try again."
+                        } else {
+                            // AniList genuinely had nothing and the mirror agrees —
+                            // this is a real empty state, not a flaky one.
+                            _discoverResults.value = emptyList()
+                        }
                     }
             }
             _isDiscoverLoading.value = false
@@ -1504,9 +1520,22 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     fun setShowAniListManga(enabled: Boolean) {
         mangaDisplayPrefs.setShowAniListManga(enabled)
         _showAniListManga.value = enabled
+        mangaTitleSearchJob?.cancel()
         if (!enabled) {
-            mangaTitleSearchJob?.cancel()
             _mangaTitleResults.value = emptyList()
+        } else if (_catalogQuery.value.isNotBlank()) {
+            // Turning the toggle on while a search is already typed (the
+            // common flow: search first, then flip the toggle on to pull
+            // manga in too) used to leave the manga strip empty until the
+            // user edited the text box again, since only onCatalogQueryChange
+            // ever kicked off a manga search. Re-run it here against
+            // whatever's already in the search box so it shows up right away.
+            val query = _catalogQuery.value
+            mangaTitleSearchJob = viewModelScope.launch {
+                aniListRepository.searchManga(query, includeMature = _matureContentEnabled.value)
+                    .onSuccess { _mangaTitleResults.value = it }
+                    .onFailure { _mangaTitleResults.value = emptyList() }
+            }
         }
     }
 
