@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.animetracker.data.network.AniListAiringSchedule
+import com.example.animetracker.ui.components.FallbackNotice
 import com.example.animetracker.ui.theme.Bone
 import com.example.animetracker.ui.theme.ErrorRed
 import com.example.animetracker.ui.theme.Smoke
@@ -69,6 +70,7 @@ fun ScheduleScreen(
     val isLoading by viewModel.isScheduleLoading.collectAsState()
     val error by viewModel.scheduleError.collectAsState()
     val localByAniListId by viewModel.localByAniListId.collectAsState()
+    val usingFallback by viewModel.scheduleUsingFallback.collectAsState()
 
     // 2 days back through 4 days ahead, centered on today.
     val days = remember { (-2..4).map { LocalDate.now().plusDays(it.toLong()) } }
@@ -111,6 +113,11 @@ fun ScheduleScreen(
         }
 
         Spacer(modifier = Modifier.height(12.dp))
+
+        if (usingFallback) {
+            FallbackNotice(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
         when {
             isLoading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -217,7 +224,7 @@ private fun ScheduleRow(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Episode ${entry.episode}",
+                text = if (entry.episode > 0) "Episode ${entry.episode}" else "New episode",
                 style = MaterialTheme.typography.bodySmall,
                 color = Smoke
             )
