@@ -57,6 +57,27 @@ private val SEARCH_QUERY = """
     }
 """.trimIndent()
 
+// Deliberately lean: the Manga toggle in Settings only ever shows results
+// as plain titles in the search list, so there's no need for the full
+// anime MEDIA_FIELDS set (episodes/duration/studios/trailer are anime-only
+// fields anyway). id/title/coverImage is enough to display a title and,
+// if tapped, save it into the local Manga list.
+private val MANGA_SEARCH_QUERY = """
+    query(${'$'}search: String, ${'$'}perPage: Int, ${'$'}isAdult: Boolean) {
+      Page(perPage: ${'$'}perPage) {
+        media(
+          search: ${'$'}search
+          type: MANGA
+          isAdult: ${'$'}isAdult
+        ) {
+          id
+          title { romaji english native }
+          coverImage { extraLarge large }
+        }
+      }
+    }
+""".trimIndent()
+
 // Extra fields fetched only for the Details screen — a "Seasons & Arcs"
 // row of related anime (prequels, sequels, side stories, etc.), keyed off
 // AniList's relationType(version: 2), which gives the cleaner/newer set of
@@ -215,6 +236,29 @@ class AniListRepository {
         val response = AniListApi.service.searchMedia(
             AniListRequest(
                 query = SEARCH_QUERY,
+                variables = mapOf(
+                    "search" to query,
+                    "perPage" to 10,
+                    "isAdult" to if (includeMature) null else false
+                )
+            )
+        )
+        val media = response.data?.Page?.media ?: emptyList()
+        if (media.isEmpty()) checkErrors(response.errors)
+        media
+    }
+
+    /**
+     * Manga title search backing the Settings "Show AniList Manga" toggle —
+     * only ever called with manual search text (never a browse/discover
+     * query the way anime has), and the caller only reads [AniListMedia.displayTitle]
+     * / [AniListMedia.posterUrl] / [AniListMedia.id] off the result since
+     * the UI shows titles only.
+     */
+    suspend fun searchManga(query: String, includeMature: Boolean = false): Result<List<AniListMedia>> = safeCall {
+        val response = AniListApi.service.searchMedia(
+            AniListRequest(
+                query = MANGA_SEARCH_QUERY,
                 variables = mapOf(
                     "search" to query,
                     "perPage" to 10,
