@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -145,7 +147,8 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                 )
             }
 
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                val availableHeight = maxHeight
                 if (isSearching) {
                     when {
                         isCatalogSearching -> {
@@ -169,7 +172,9 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                             AdaptiveAnimeGrid(
                                 items = catalogItems,
                                 key = { it.key },
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = availableHeight),
                                 contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 20.dp),
                                 horizontalSpacing = 10.dp,
                                 verticalSpacing = 18.dp
@@ -214,7 +219,9 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
                             AdaptiveAnimeGrid(
                                 items = discoverItems,
                                 key = { it.key },
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = availableHeight),
                                 contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 20.dp),
                                 horizontalSpacing = 10.dp,
                                 verticalSpacing = 18.dp
