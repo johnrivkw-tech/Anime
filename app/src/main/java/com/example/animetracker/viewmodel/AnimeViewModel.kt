@@ -16,6 +16,7 @@ import com.example.animetracker.data.LightNovelFolderPrefs
 import com.example.animetracker.data.LightNovelRepository
 import com.example.animetracker.data.MalXmlPort
 import com.example.animetracker.data.MangaEntity
+import com.example.animetracker.data.MangaDisplayPrefs
 import com.example.animetracker.data.MangaRepository
 import com.example.animetracker.data.ProfilePrefs
 import com.example.animetracker.data.FavoritesPrefs
@@ -96,6 +97,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val aniListAuthPrefs = AniListAuthPrefs(application)
     private val lightNovelFolderPrefs = LightNovelFolderPrefs(application)
     private val gachaPrefs = GachaPrefs(application)
+    private val mangaDisplayPrefs = MangaDisplayPrefs(application)
 
     private val _themeOption = MutableStateFlow(themePrefs.getTheme())
     val themeOption: StateFlow<AppThemeOption> = _themeOption.asStateFlow()
@@ -256,6 +258,18 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     val catalogError: StateFlow<String?> = _catalogError.asStateFlow()
 
     private var catalogJob: Job? = null
+
+    // --- Search tab: AniList manga titles, gated by the Settings toggle ---
+    // Off by default and only ever populated by a manual search (never a
+    // browse/discover call the way anime results are), per the Settings
+    // "Show AniList Manga" toggle.
+    private val _showAniListManga = MutableStateFlow(mangaDisplayPrefs.getShowAniListManga())
+    val showAniListManga: StateFlow<Boolean> = _showAniListManga.asStateFlow()
+
+    private val _mangaTitleResults = MutableStateFlow<List<AniListMedia>>(emptyList())
+    val mangaTitleResults: StateFlow<List<AniListMedia>> = _mangaTitleResults.asStateFlow()
+
+    private var mangaTitleSearchJob: Job? = null
 
     // --- Profile: banner image + display name (SharedPreferences) ---
     private val _profileBannerPath = MutableStateFlow(profilePrefs.getBannerPath())
@@ -1371,16 +1385,53 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             _catalogResults.value = emptyList()
             _catalogError.value = null
             _isCatalogSearching.value = false
-            return
+        } else {
+            catalogJob = viewModelScope.launch {
+                delay(400)
+                _isCatalogSearching.value = true
+                _catalogError.value = null
+                aniListRepository.searchAnime(query, includeMature = _matureContentEnabled.value)
+                    .onSuccess { _catalogResults.value = it }
+                    .onFailure { _catalogError.value = "Couldn't reach the anime database. Check your connection." }
+                _isCatalogSearching.value = false
+            }
         }
-        catalogJob = viewModelScope.launch {
-            delay(400)
-            _isCatalogSearching.value = true
-            _catalogError.value = null
-            aniListRepository.searchAnime(query, includeMature = _matureContentEnabled.value)
-                .onSuccess { _catalogResults.value = it }
-                .onFailure { _catalogError.value = "Couldn't reach the anime database. Check your connection." }
-            _isCatalogSearching.value = false
+
+        // Manga titles piggyback on the same search box — only when the
+        // Settings toggle is on, and only for manual text (never browse).
+        mangaTitleSearchJob?.cancel()
+        if (!_showAniListManga.value || query.isBlank()) {
+            _mangaTitleResults.value = emptyList()
+        } else {
+            mangaTitleSearchJob = viewModelScope.launch {
+                delay(400)
+                aniListRepository.searchManga(query, includeMature = _matureContentEnabled.value)
+                    .onSuccess { _mangaTitleResults.value = it }
+                    .onFailure { _mangaTitleResults.value = emptyList() }
+            }
+        }
+    }
+
+    /** Settings toggle: on reveals manga titles in Search + the Manga list in Settings; off hides both and clears any live results. */
+    fun setShowAniListManga(enabled: Boolean) {
+        mangaDisplayPrefs.setShowAniListManga(enabled)
+        _showAniListManga.value = enabled
+        if (!enabled) {
+            mangaTitleSearchJob?.cancel()
+            _mangaTitleResults.value = emptyList()
+        }
+    }
+
+    /** Saves an AniList manga title (tapped from Search) into the local Manga list shown in Settings. */
+    fun addAniListMangaToLibrary(media: AniListMedia) {
+        viewModelScope.launch {
+            mangaRepository.addManga(
+                MangaEntity(
+                    mangaDexId = "anilist:${media.id}",
+                    title = media.displayTitle,
+                    coverUrl = media.posterUrl
+                )
+            )
         }
     }
 
