@@ -1,6 +1,7 @@
 package com.example.animetracker.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,49 +12,35 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.example.animetracker.data.network.ANILIST_GENRES
 import com.example.animetracker.ui.components.AdaptiveAnimeGrid
 import com.example.animetracker.ui.components.AnimeGridCard
@@ -63,26 +50,14 @@ import com.example.animetracker.ui.theme.ErrorRed
 import com.example.animetracker.ui.theme.Smoke
 import com.example.animetracker.viewmodel.AnimeViewModel
 
-private val SEASONS = listOf("WINTER", "SPRING", "SUMMER", "FALL")
-
-private fun seasonLabel(value: String?): String = when (value) {
-    "WINTER" -> "Winter"
-    "SPRING" -> "Spring"
-    "SUMMER" -> "Summer"
-    "FALL" -> "Fall"
-    else -> "Any Season"
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack: () -> Unit) {
+fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
     val query by viewModel.catalogQuery.collectAsState()
     val catalogResults by viewModel.catalogResults.collectAsState()
     val isCatalogSearching by viewModel.isCatalogSearching.collectAsState()
     val catalogError by viewModel.catalogError.collectAsState()
 
     val genre by viewModel.discoverGenre.collectAsState()
-    val season by viewModel.discoverSeason.collectAsState()
     val discoverResults by viewModel.discoverResults.collectAsState()
     val isDiscoverLoading by viewModel.isDiscoverLoading.collectAsState()
     val discoverError by viewModel.discoverError.collectAsState()
@@ -98,40 +73,43 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
         discoverResults.map { it.toHomeCardItem(localByAniListId[it.id]) }
     }
 
-    var filterSheetOpen by remember { mutableStateOf(false) }
-    val activeFilterCount = listOfNotNull(season, genre).size
-
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            TopAppBar(
-                title = { Text("Search") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Bone)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background, titleContentColor = Bone)
-            )
-        }
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // Header — same title style/spacing as My List and Schedule
+            // (titleLarge/Black, 16dp horizontal/10dp vertical) so all four
+            // tabs read as one consistent app rather than three different
+            // ones stitched together. No back button: Search is a bottom
+            // nav tab like the others, not a screen you drill into.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    text = "Search",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Black,
+                    color = Bone
+                )
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedTextField(
                     value = query,
                     onValueChange = viewModel::onCatalogQueryChange,
                     modifier = Modifier
-                        .weight(1f)
+                        .fillMaxWidth()
                         .height(56.dp),
                     placeholder = {
                         Text(
@@ -150,13 +128,21 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                     },
                     singleLine = true
                 )
+            }
 
-                if (!isSearching) {
-                    FilterButton(
-                        activeCount = activeFilterCount,
-                        onClick = { filterSheetOpen = true }
-                    )
-                }
+            // Genre tabs replace the old Filter button + dialog entirely —
+            // tap a genre directly, same flat-tab-strip style as My List's
+            // All/Watching/Completed/Planning row, just horizontally
+            // scrollable since there are ~18 genres instead of 4. These
+            // only affect the browse/discover grid: once you're actually
+            // typing a search, genre has no effect on catalog results, so
+            // the strip hides itself the same way the old Filter button did.
+            if (!isSearching) {
+                GenreFilterTabs(
+                    genres = ANILIST_GENRES,
+                    selected = genre,
+                    onSelect = viewModel::setDiscoverGenre
+                )
             }
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -184,7 +170,7 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                                 items = catalogItems,
                                 key = { it.key },
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 110.dp),
+                                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 20.dp),
                                 horizontalSpacing = 10.dp,
                                 verticalSpacing = 18.dp
                             ) { item ->
@@ -219,7 +205,7 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                         }
                         discoverItems.isEmpty() -> {
                             Text(
-                                text = "No anime match these filters",
+                                text = "No anime match this genre",
                                 modifier = Modifier.align(Alignment.Center),
                                 color = Smoke
                             )
@@ -229,7 +215,7 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
                                 items = discoverItems,
                                 key = { it.key },
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 110.dp),
+                                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 20.dp),
                                 horizontalSpacing = 10.dp,
                                 verticalSpacing = 18.dp
                             ) { item ->
@@ -241,52 +227,43 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit, onBack:
             }
         }
     }
-
-    if (filterSheetOpen) {
-        FilterDialog(
-            season = season,
-            genre = genre,
-            onSeasonChange = viewModel::setDiscoverSeason,
-            onGenreChange = viewModel::setDiscoverGenre,
-            onClearAll = {
-                viewModel.setDiscoverSeason(null)
-                viewModel.setDiscoverGenre(null)
-            },
-            onDismiss = { filterSheetOpen = false }
-        )
-    }
 }
 
-/** Single entry point for every discover filter — replaces the row of always-visible
- *  season/year/genre controls with one button that opens them in a dialog, and shows
- *  a small badge when filters are active so it's clear at a glance. */
+/**
+ * Flat text tab strip for genres — visually identical to My List's
+ * All/Watching/Completed/Planning strip (bold + underlined label when
+ * active, hairline baseline underneath), just scrollable horizontally
+ * since ~18 genres won't fit on screen at once the way 4 status tabs do.
+ */
 @Composable
-private fun FilterButton(activeCount: Int, onClick: () -> Unit) {
-    Box {
-        OutlinedButton(
-            onClick = onClick,
-            shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Bone),
-            contentPadding = PaddingValues(0.dp),
-            modifier = Modifier.size(56.dp)
+private fun GenreFilterTabs(
+    genres: List<String>,
+    selected: String?,
+    onSelect: (String?) -> Unit
+) {
+    Box(modifier = Modifier.fillMaxWidth()) {
+        HorizontalDivider(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            color = MaterialTheme.colorScheme.surface,
+            thickness = 1.dp
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(22.dp)
         ) {
-            Icon(Icons.Default.FilterList, contentDescription = "Filters", modifier = Modifier.size(20.dp))
-        }
-        if (activeCount > 0) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .offset(x = 4.dp, y = (-4).dp)
-                    .size(18.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "$activeCount",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = Bone,
-                    fontWeight = FontWeight.Bold
+            GenreTab(
+                label = "All Genres",
+                isSelected = selected == null,
+                onClick = { onSelect(null) }
+            )
+            genres.forEach { g ->
+                GenreTab(
+                    label = g,
+                    isSelected = selected == g,
+                    onClick = { onSelect(if (selected == g) null else g) }
                 )
             }
         }
@@ -294,116 +271,28 @@ private fun FilterButton(activeCount: Int, onClick: () -> Unit) {
 }
 
 @Composable
-private fun FilterDialog(
-    season: String?,
-    genre: String?,
-    onSeasonChange: (String?) -> Unit,
-    onGenreChange: (String?) -> Unit,
-    onClearAll: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surface
-        ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Filters",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Bone
-                    )
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Smoke)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(text = "Season", style = MaterialTheme.typography.labelLarge, color = Smoke)
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilterChip(
-                        selected = season == null,
-                        onClick = { onSeasonChange(null) },
-                        label = { Text("Any Season") },
-                        shape = RoundedCornerShape(50),
-                        colors = pillChipColors()
-                    )
-                    SEASONS.forEach { s ->
-                        FilterChip(
-                            selected = season == s,
-                            onClick = { onSeasonChange(if (season == s) null else s) },
-                            label = { Text(seasonLabel(s)) },
-                            shape = RoundedCornerShape(50),
-                            colors = pillChipColors()
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-                Text(text = "Genre", style = MaterialTheme.typography.labelLarge, color = Smoke)
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilterChip(
-                        selected = genre == null,
-                        onClick = { onGenreChange(null) },
-                        label = { Text("All Genres") },
-                        shape = RoundedCornerShape(50),
-                        colors = pillChipColors()
-                    )
-                    ANILIST_GENRES.forEach { g ->
-                        FilterChip(
-                            selected = genre == g,
-                            onClick = { onGenreChange(if (genre == g) null else g) },
-                            label = { Text(g) },
-                            shape = RoundedCornerShape(50),
-                            colors = pillChipColors()
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = onClearAll) {
-                        Text("Clear all", color = Smoke)
-                    }
-                    Button(
-                        onClick = onDismiss,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Bone)
-                    ) {
-                        Text("Done", fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
+private fun GenreTab(label: String, isSelected: Boolean, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+            .clickable(onClick = onClick)
+            .padding(top = 4.dp, start = 2.dp, end = 2.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            color = if (isSelected) Bone else Smoke,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Box(
+            modifier = Modifier
+                .height(2.dp)
+                .width(if (isSelected) 22.dp else 0.dp)
+                .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
+        )
     }
 }
-
-@Composable
-private fun pillChipColors() = FilterChipDefaults.filterChipColors(
-    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-    labelColor = Smoke,
-    selectedContainerColor = MaterialTheme.colorScheme.primary,
-    selectedLabelColor = Bone
-)
