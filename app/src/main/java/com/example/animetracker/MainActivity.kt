@@ -34,6 +34,7 @@ import androidx.navigation.navArgument
 import com.example.animetracker.ui.navigation.BottomNavBar
 import com.example.animetracker.ui.navigation.Destination
 import com.example.animetracker.ui.navigation.PROFILE_ROUTE
+import com.example.animetracker.ui.screens.DanbooruScreen
 import com.example.animetracker.ui.screens.HomeFeedScreen
 import com.example.animetracker.ui.screens.HomeScreen
 import com.example.animetracker.ui.screens.GamesScreen
@@ -150,7 +151,14 @@ private fun MainAppContent(viewModel: AnimeViewModel) {
                     onAnimeClick = { aniListId -> navController.navigate("details/$aniListId") },
                     onChatClick = { navController.navigate("ai_chat") },
                     onGamesClick = { navController.navigate("games") },
+                    onGalleryClick = { navController.navigate("danbooru") },
                     onProfileClick = { navController.navigate(PROFILE_ROUTE) }
+                )
+            }
+            composable("danbooru") {
+                DanbooruScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() }
                 )
             }
             composable(Destination.MY_LIST.route) {
