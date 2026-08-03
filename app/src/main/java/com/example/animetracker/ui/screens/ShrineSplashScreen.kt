@@ -59,7 +59,7 @@ import kotlin.random.Random
 //   ShrineSplashScreen(
 //       background = painterResource(R.drawable.splash_shrine_bg),
 //       quality = SplashQuality.MEDIUM, // LOW for budget devices
-//       logo = { ReiSealWordmark(markSize = 96.dp) }
+//       logo = { ReiWordmarkDrawn(width = 260.dp) }
 //   )
 //
 // Drop your artwork into res/drawable (or drawable-nodpi for a large,
