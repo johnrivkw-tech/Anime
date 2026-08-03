@@ -45,6 +45,8 @@ import com.example.animetracker.data.network.MangaDexManga
 import com.example.animetracker.data.network.MangaDexRepository
 import com.example.animetracker.data.network.DanbooruPost
 import com.example.animetracker.data.network.DanbooruRepository
+import com.example.animetracker.data.network.DanbooruTagSuggestion
+import com.example.animetracker.data.DanbooruFavoritesPrefs
 import com.example.animetracker.ui.model.ChatMessage
 import com.example.animetracker.ui.model.BERRIES_PER_COMPLETION
 import com.example.animetracker.ui.model.BERRIES_PER_EPISODE
@@ -103,6 +105,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val lightNovelFolderPrefs = LightNovelFolderPrefs(application)
     private val gachaPrefs = GachaPrefs(application)
     private val mangaDisplayPrefs = MangaDisplayPrefs(application)
+    private val danbooruFavoritesPrefs = DanbooruFavoritesPrefs(application)
 
     private val _themeOption = MutableStateFlow(themePrefs.getTheme())
     val themeOption: StateFlow<AppThemeOption> = _themeOption.asStateFlow()
@@ -374,8 +377,8 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     val mangaSearchError: StateFlow<String?> = _mangaSearchError.asStateFlow()
 
     // --- Danbooru gallery ---
-    // Locked to rating:g (general) at the repository/query level — see
-    // [DanbooruRepository]. There is no state or setting anywhere in this
+    // Locked to rating:s (general/sensitive) at the repository/query level —
+    // see [DanbooruRepository]. There is no state or setting anywhere in this
     // ViewModel that can widen it.
     private val _danbooruDiscoverResults = MutableStateFlow<List<DanbooruPost>>(emptyList())
     val danbooruDiscoverResults: StateFlow<List<DanbooruPost>> = _danbooruDiscoverResults.asStateFlow()
@@ -383,8 +386,16 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _isDanbooruDiscoverLoading = MutableStateFlow(false)
     val isDanbooruDiscoverLoading: StateFlow<Boolean> = _isDanbooruDiscoverLoading.asStateFlow()
 
+    private val _isDanbooruDiscoverLoadingMore = MutableStateFlow(false)
+    val isDanbooruDiscoverLoadingMore: StateFlow<Boolean> = _isDanbooruDiscoverLoadingMore.asStateFlow()
+
+    private val _danbooruDiscoverCanLoadMore = MutableStateFlow(true)
+    val danbooruDiscoverCanLoadMore: StateFlow<Boolean> = _danbooruDiscoverCanLoadMore.asStateFlow()
+
     private val _danbooruDiscoverError = MutableStateFlow<String?>(null)
     val danbooruDiscoverError: StateFlow<String?> = _danbooruDiscoverError.asStateFlow()
+
+    private var danbooruDiscoverPage = 1
 
     private val _danbooruSearchQuery = MutableStateFlow("")
     val danbooruSearchQuery: StateFlow<String> = _danbooruSearchQuery.asStateFlow()
@@ -395,8 +406,30 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _isDanbooruSearchLoading = MutableStateFlow(false)
     val isDanbooruSearchLoading: StateFlow<Boolean> = _isDanbooruSearchLoading.asStateFlow()
 
+    private val _isDanbooruSearchLoadingMore = MutableStateFlow(false)
+    val isDanbooruSearchLoadingMore: StateFlow<Boolean> = _isDanbooruSearchLoadingMore.asStateFlow()
+
+    private val _danbooruSearchCanLoadMore = MutableStateFlow(true)
+    val danbooruSearchCanLoadMore: StateFlow<Boolean> = _danbooruSearchCanLoadMore.asStateFlow()
+
     private val _danbooruSearchError = MutableStateFlow<String?>(null)
     val danbooruSearchError: StateFlow<String?> = _danbooruSearchError.asStateFlow()
+
+    private var danbooruSearchPage = 1
+    private var danbooruSearchJob: Job? = null
+    private var danbooruTagSuggestJob: Job? = null
+
+    // Tag-search type-ahead shown under the search bar.
+    private val _danbooruTagSuggestions = MutableStateFlow<List<DanbooruTagSuggestion>>(emptyList())
+    val danbooruTagSuggestions: StateFlow<List<DanbooruTagSuggestion>> = _danbooruTagSuggestions.asStateFlow()
+
+    // Saved/"hearted" posts — persisted locally so the Saved tab works offline.
+    private val _danbooruSavedPosts = MutableStateFlow(danbooruFavoritesPrefs.getSaved())
+    val danbooruSavedPosts: StateFlow<List<DanbooruPost>> = _danbooruSavedPosts.asStateFlow()
+
+    val danbooruSavedIds: StateFlow<Set<Long>> = _danbooruSavedPosts
+        .map { posts -> posts.map { it.id }.toSet() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     // --- Manga: chapters for whichever manga was last tapped ---
     private val _selectedMangaTitle = MutableStateFlow<String?>(null)
@@ -1267,14 +1300,18 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     // --- Danbooru gallery ---
 
-    /** Loads (or refreshes) the general-rated discover feed. */
+    /** Loads (or refreshes) the discover feed, from page 1. */
     fun loadDanbooruDiscover() {
         viewModelScope.launch {
             _isDanbooruDiscoverLoading.value = true
             _danbooruDiscoverError.value = null
+            danbooruDiscoverPage = 1
 
-            danbooruRepository.discover()
-                .onSuccess { _danbooruDiscoverResults.value = it }
+            danbooruRepository.discover(page = danbooruDiscoverPage)
+                .onSuccess {
+                    _danbooruDiscoverResults.value = it
+                    _danbooruDiscoverCanLoadMore.value = it.isNotEmpty()
+                }
                 .onFailure { e ->
                     _danbooruDiscoverError.value = e.message ?: "Couldn't load the gallery. Check your connection and try again."
                 }
@@ -1283,21 +1320,89 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Appends the next page of the discover feed underneath what's already shown. */
+    fun loadMoreDanbooruDiscover() {
+        if (_isDanbooruDiscoverLoading.value || _isDanbooruDiscoverLoadingMore.value) return
+        if (!_danbooruDiscoverCanLoadMore.value) return
+        viewModelScope.launch {
+            _isDanbooruDiscoverLoadingMore.value = true
+            val nextPage = danbooruDiscoverPage + 1
+
+            danbooruRepository.discover(page = nextPage)
+                .onSuccess { newPosts ->
+                    danbooruDiscoverPage = nextPage
+                    _danbooruDiscoverCanLoadMore.value = newPosts.isNotEmpty()
+                    val existingIds = _danbooruDiscoverResults.value.map { it.id }.toSet()
+                    _danbooruDiscoverResults.value =
+                        _danbooruDiscoverResults.value + newPosts.filterNot { it.id in existingIds }
+                }
+                .onFailure {
+                    // Leave existing results in place; just stop offering more for this failed page.
+                    _danbooruDiscoverCanLoadMore.value = true
+                }
+
+            _isDanbooruDiscoverLoadingMore.value = false
+        }
+    }
+
+    /** Updates the search field text and (debounced) refreshes the tag-suggestion dropdown. */
     fun onDanbooruSearchQueryChange(query: String) {
         _danbooruSearchQuery.value = query
+
+        danbooruTagSuggestJob?.cancel()
+        val currentTerm = query.substringAfterLast(' ')
+        if (currentTerm.isBlank()) {
+            _danbooruTagSuggestions.value = emptyList()
+            return
+        }
+        danbooruTagSuggestJob = viewModelScope.launch {
+            delay(250)
+            danbooruRepository.suggestTags(currentTerm)
+                .onSuccess { _danbooruTagSuggestions.value = it }
+                .onFailure { _danbooruTagSuggestions.value = emptyList() }
+        }
+    }
+
+    /**
+     * Fills in a tag tapped from the suggestion dropdown (or from a tag chip
+     * on a post) — replaces whatever partial word was being typed, keeps any
+     * earlier finished tags, and immediately searches.
+     */
+    fun selectDanbooruTagSuggestion(tagName: String) {
+        val current = _danbooruSearchQuery.value
+        val finishedTags = current.substringBeforeLast(' ', "").let {
+            if (current.contains(' ')) "$it " else ""
+        }
+        val newQuery = "$finishedTags$tagName"
+        _danbooruSearchQuery.value = newQuery
+        _danbooruTagSuggestions.value = emptyList()
+        searchDanbooru(newQuery)
+    }
+
+    /** Runs a full tag search directly, e.g. when a character/artist tag is tapped in the preview dialog. */
+    fun searchDanbooruByTag(tagName: String) {
+        _danbooruSearchQuery.value = tagName
+        _danbooruTagSuggestions.value = emptyList()
+        searchDanbooru(tagName)
     }
 
     fun searchDanbooru(query: String) {
+        danbooruSearchJob?.cancel()
         if (query.isBlank()) {
             _danbooruSearchResults.value = emptyList()
+            _danbooruSearchError.value = null
             return
         }
-        viewModelScope.launch {
+        danbooruSearchJob = viewModelScope.launch {
             _isDanbooruSearchLoading.value = true
             _danbooruSearchError.value = null
+            danbooruSearchPage = 1
 
-            danbooruRepository.search(query)
-                .onSuccess { _danbooruSearchResults.value = it }
+            danbooruRepository.search(query, page = danbooruSearchPage)
+                .onSuccess {
+                    _danbooruSearchResults.value = it
+                    _danbooruSearchCanLoadMore.value = it.isNotEmpty()
+                }
                 .onFailure { e ->
                     _danbooruSearchError.value = e.message ?: "Couldn't search the gallery. Check your connection and try again."
                 }
@@ -1306,10 +1411,51 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Appends the next page of the current search underneath what's already shown. */
+    fun loadMoreDanbooruSearch() {
+        val query = _danbooruSearchQuery.value
+        if (query.isBlank()) return
+        if (_isDanbooruSearchLoading.value || _isDanbooruSearchLoadingMore.value) return
+        if (!_danbooruSearchCanLoadMore.value) return
+        viewModelScope.launch {
+            _isDanbooruSearchLoadingMore.value = true
+            val nextPage = danbooruSearchPage + 1
+
+            danbooruRepository.search(query, page = nextPage)
+                .onSuccess { newPosts ->
+                    danbooruSearchPage = nextPage
+                    _danbooruSearchCanLoadMore.value = newPosts.isNotEmpty()
+                    val existingIds = _danbooruSearchResults.value.map { it.id }.toSet()
+                    _danbooruSearchResults.value =
+                        _danbooruSearchResults.value + newPosts.filterNot { it.id in existingIds }
+                }
+                .onFailure {
+                    _danbooruSearchCanLoadMore.value = true
+                }
+
+            _isDanbooruSearchLoadingMore.value = false
+        }
+    }
+
     fun clearDanbooruSearch() {
+        danbooruSearchJob?.cancel()
+        danbooruTagSuggestJob?.cancel()
         _danbooruSearchQuery.value = ""
         _danbooruSearchResults.value = emptyList()
         _danbooruSearchError.value = null
+        _danbooruTagSuggestions.value = emptyList()
+    }
+
+    /** Toggles a post's saved/hearted state in the persisted Saved list. */
+    fun toggleDanbooruSaved(post: DanbooruPost) {
+        val current = _danbooruSavedPosts.value
+        val updated = if (current.any { it.id == post.id }) {
+            current.filterNot { it.id == post.id }
+        } else {
+            current + post
+        }
+        _danbooruSavedPosts.value = updated
+        danbooruFavoritesPrefs.setSaved(updated)
     }
 
     fun addMangaToLibrary(manga: MangaDexManga) {
