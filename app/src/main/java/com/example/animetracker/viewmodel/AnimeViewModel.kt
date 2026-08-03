@@ -43,6 +43,8 @@ import com.example.animetracker.data.network.AniListCharacterNode
 import com.example.animetracker.data.network.MangaDexChapter
 import com.example.animetracker.data.network.MangaDexManga
 import com.example.animetracker.data.network.MangaDexRepository
+import com.example.animetracker.data.network.DanbooruPost
+import com.example.animetracker.data.network.DanbooruRepository
 import com.example.animetracker.ui.model.ChatMessage
 import com.example.animetracker.ui.model.BERRIES_PER_COMPLETION
 import com.example.animetracker.ui.model.BERRIES_PER_EPISODE
@@ -87,6 +89,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val jikanRepository = JikanRepository()
     private val aniListSyncRepository = AniListSyncRepository()
     private val mangaDexRepository = MangaDexRepository()
+    private val danbooruRepository = DanbooruRepository()
     private val geminiRepository = GeminiRepository()
     private val geminiChatRepository = GeminiChatRepository()
     private val profilePrefs = ProfilePrefs(application)
@@ -369,6 +372,31 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _mangaSearchError = MutableStateFlow<String?>(null)
     val mangaSearchError: StateFlow<String?> = _mangaSearchError.asStateFlow()
+
+    // --- Danbooru gallery ---
+    // Locked to rating:g (general) at the repository/query level — see
+    // [DanbooruRepository]. There is no state or setting anywhere in this
+    // ViewModel that can widen it.
+    private val _danbooruDiscoverResults = MutableStateFlow<List<DanbooruPost>>(emptyList())
+    val danbooruDiscoverResults: StateFlow<List<DanbooruPost>> = _danbooruDiscoverResults.asStateFlow()
+
+    private val _isDanbooruDiscoverLoading = MutableStateFlow(false)
+    val isDanbooruDiscoverLoading: StateFlow<Boolean> = _isDanbooruDiscoverLoading.asStateFlow()
+
+    private val _danbooruDiscoverError = MutableStateFlow<String?>(null)
+    val danbooruDiscoverError: StateFlow<String?> = _danbooruDiscoverError.asStateFlow()
+
+    private val _danbooruSearchQuery = MutableStateFlow("")
+    val danbooruSearchQuery: StateFlow<String> = _danbooruSearchQuery.asStateFlow()
+
+    private val _danbooruSearchResults = MutableStateFlow<List<DanbooruPost>>(emptyList())
+    val danbooruSearchResults: StateFlow<List<DanbooruPost>> = _danbooruSearchResults.asStateFlow()
+
+    private val _isDanbooruSearchLoading = MutableStateFlow(false)
+    val isDanbooruSearchLoading: StateFlow<Boolean> = _isDanbooruSearchLoading.asStateFlow()
+
+    private val _danbooruSearchError = MutableStateFlow<String?>(null)
+    val danbooruSearchError: StateFlow<String?> = _danbooruSearchError.asStateFlow()
 
     // --- Manga: chapters for whichever manga was last tapped ---
     private val _selectedMangaTitle = MutableStateFlow<String?>(null)
@@ -1235,6 +1263,53 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         _mangaSearchQuery.value = ""
         _mangaSearchResults.value = emptyList()
         _mangaSearchError.value = null
+    }
+
+    // --- Danbooru gallery ---
+
+    /** Loads (or refreshes) the general-rated discover feed. */
+    fun loadDanbooruDiscover() {
+        viewModelScope.launch {
+            _isDanbooruDiscoverLoading.value = true
+            _danbooruDiscoverError.value = null
+
+            danbooruRepository.discover()
+                .onSuccess { _danbooruDiscoverResults.value = it }
+                .onFailure { e ->
+                    _danbooruDiscoverError.value = e.message ?: "Couldn't load the gallery. Check your connection and try again."
+                }
+
+            _isDanbooruDiscoverLoading.value = false
+        }
+    }
+
+    fun onDanbooruSearchQueryChange(query: String) {
+        _danbooruSearchQuery.value = query
+    }
+
+    fun searchDanbooru(query: String) {
+        if (query.isBlank()) {
+            _danbooruSearchResults.value = emptyList()
+            return
+        }
+        viewModelScope.launch {
+            _isDanbooruSearchLoading.value = true
+            _danbooruSearchError.value = null
+
+            danbooruRepository.search(query)
+                .onSuccess { _danbooruSearchResults.value = it }
+                .onFailure { e ->
+                    _danbooruSearchError.value = e.message ?: "Couldn't search the gallery. Check your connection and try again."
+                }
+
+            _isDanbooruSearchLoading.value = false
+        }
+    }
+
+    fun clearDanbooruSearch() {
+        _danbooruSearchQuery.value = ""
+        _danbooruSearchResults.value = emptyList()
+        _danbooruSearchError.value = null
     }
 
     fun addMangaToLibrary(manga: MangaDexManga) {
