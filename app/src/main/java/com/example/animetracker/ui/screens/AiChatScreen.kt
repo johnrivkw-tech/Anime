@@ -182,9 +182,7 @@ fun AiChatScreen(
                             unfocusedTextColor = Bone,
                             cursorColor = MaterialTheme.colorScheme.primary,
                             focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = Color.Transparent
+                            unfocusedIndicatorColor = Color.Transparent
                         ),
                         shape = RoundedCornerShape(24.dp),
                         singleLine = true
@@ -352,10 +350,11 @@ private fun ChatBubble(message: ChatMessage, onAnimeClick: (Int) -> Unit) {
                 Spacer(modifier = Modifier.width(8.dp))
             }
             BoxWithConstraints(modifier = Modifier.weight(1f, fill = false)) {
+                val bubbleMaxWidth = maxWidth * 0.8f
                 Column(horizontalAlignment = if (message.isUser) Alignment.End else Alignment.Start) {
                     Box(
                         modifier = Modifier
-                            .widthIn(max = maxWidth * 0.8f)
+                            .widthIn(max = bubbleMaxWidth)
                             .clip(
                                 RoundedCornerShape(
                                     topStart = 18.dp,
