@@ -107,6 +107,11 @@ implementation(libs.navigation.compose)
     // Framework tree URI) for the Light Novels folder-watch feature.
     implementation("androidx.documentfile:documentfile:1.0.1")
 
+    // ExoPlayer (Media3) — in-app playback (with sound) for animated/video
+    // Danbooru posts (webm/mp4) in the gallery's preview dialog.
+    implementation("androidx.media3:media3-exoplayer:1.5.1")
+    implementation("androidx.media3:media3-ui:1.5.1")
+
 
     // Tests
     testImplementation(libs.junit)
