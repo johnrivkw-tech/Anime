@@ -23,10 +23,11 @@ class DanbooruRepository {
     }
 
     private fun buildQuery(rawTags: String): String {
-        return rawTags
+        val cleaned = rawTags
             .split(' ')
-            .filter { it.isNotBlank() }
-            .joinToString(" ")
+            .filter { it.isNotBlank() && !it.startsWith("rating:") }
+
+        return (cleaned + "rating:g,s,q,e").joinToString(" ")
     }
 
     private suspend inline fun <T> safeCall(crossinline block: suspend () -> T): Result<T> = try {
