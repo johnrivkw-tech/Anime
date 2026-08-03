@@ -59,13 +59,7 @@ import com.example.animetracker.viewmodel.AnimeViewModel
 
 /**
  * Fan-art gallery browser backed by Danbooru's public API.
- *
- * This screen only ever shows general-rated ("safe") posts. That's not a
- * setting here — it's enforced upstream in [com.example.animetracker.data.network.DanbooruRepository],
- * which hard-codes `rating:g` on every request and filters the response
- * again client-side. There is no toggle on this screen, in Settings, or
- * anywhere else in the app that changes that.
- */
+  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DanbooruScreen(viewModel: AnimeViewModel, onBack: () -> Unit) {
