@@ -44,9 +44,10 @@ import com.example.animetracker.ui.screens.SearchScreen
 import com.example.animetracker.ui.screens.SettingsScreen
 import com.example.animetracker.ui.screens.ShrineSplashScreen
 import com.example.animetracker.ui.screens.SplashQuality
-import com.example.animetracker.ui.components.ReiSealWordmark
+import com.example.animetracker.ui.components.ReiWordmarkDrawn
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.geometry.Offset
 import com.example.animetracker.ui.theme.AnimeTrackerTheme
 import com.example.animetracker.viewmodel.AnimeViewModel
 
@@ -108,12 +109,16 @@ private fun ReiApp(viewModel: AnimeViewModel) {
         label = "splash-to-app"
     ) { ready ->
         if (!ready) {
-            // TODO: R.drawable.splash_shrine_bg must match whatever you
-            // actually named the artwork file you dropped into res/drawable.
+            // Night torii artwork: empty sky sits above the gate (roughly
+            // the top 45% of the image), so the logo reveal zone is biased
+            // well above center, and the lantern glow spots are re-tuned to
+            // this image's lantern positions (see logo_rei_wordmark notes).
             ShrineSplashScreen(
                 background = painterResource(R.drawable.splash_shrine_bg),
                 quality = SplashQuality.MEDIUM, // drop to LOW on lower-end devices
-                logo = { ReiSealWordmark(markSize = 96.dp) }
+                lanternSpots = listOf(Offset(0.15f, 0.76f), Offset(0.91f, 0.76f)),
+                logoVerticalBias = -0.68f,
+                logo = { ReiWordmarkDrawn(width = 260.dp) }
             )
         } else {
             MainAppContent(viewModel)
