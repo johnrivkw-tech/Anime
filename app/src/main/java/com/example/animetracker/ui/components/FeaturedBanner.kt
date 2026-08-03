@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Casino
+import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.CircularProgressIndicator
@@ -62,6 +63,7 @@ fun FeaturedBanner(
     onClick: (HomeCardItem) -> Unit,
     onAiClick: () -> Unit,
     onGamesClick: () -> Unit,
+    onGalleryClick: () -> Unit,
     onProfileClick: () -> Unit,
     profileAvatarPath: String? = null,
     modifier: Modifier = Modifier
@@ -286,6 +288,16 @@ fun FeaturedBanner(
                             onClick = {
                                 menuExpanded = false
                                 onGamesClick()
+                            }
+                        )
+                        HamburgerMenuItem(
+                            title = "Gallery",
+                            subtitle = "Fan art, general-rated",
+                            icon = Icons.Filled.Collections,
+                            iconTint = MaterialTheme.colorScheme.secondary,
+                            onClick = {
+                                menuExpanded = false
+                                onGalleryClick()
                             }
                         )
                     }
