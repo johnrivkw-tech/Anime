@@ -11,6 +11,12 @@ class DanbooruRepository {
         fetch(tags = query, page = page)
     }
 
+    /** Tag-name suggestions for the search bar's type-ahead dropdown. Not post content, so no rating filter needed. */
+    suspend fun suggestTags(query: String): Result<List<DanbooruTagSuggestion>> = safeCall {
+        if (query.isBlank()) return@safeCall emptyList()
+        DanbooruApi.service.autocompleteTags(query = query.trim())
+    }
+
     private suspend fun fetch(tags: String, page: Int): List<DanbooruPost> {
         val response = DanbooruApi.service.getPosts(
             tags = buildQuery(tags),
