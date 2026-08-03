@@ -189,7 +189,7 @@ private fun SafeContentBanner() {
             )
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(start = 6.dp))
             Text(
-                text = "General-rated art only",
+                text = "Explicit-rated art",
                 style = MaterialTheme.typography.labelSmall,
                 color = Smoke
             )
