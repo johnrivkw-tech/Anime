@@ -10,9 +10,10 @@ import retrofit2.http.Query
  *
  * Every call goes through [DanbooruRepository], which is the only place
  * that's allowed to build the `tags` query string. It always appends
- * `rating:g` (Danbooru's "general" rating) and strips any `rating:` tag a
+ * `rating:s` (Danbooru's "sensitive" rating) and strips any `rating:` tag a
  * caller might try to pass in, so this service interface itself never sees
- * a request that could return anything outside the general rating.
+ * a request that could return anything outside general/sensitive-rated
+ * content — no questionable or explicit results.
  */
 interface DanbooruApiService {
 
@@ -22,6 +23,14 @@ interface DanbooruApiService {
         @Query("limit") limit: Int = 30,
         @Query("page") page: Int = 1
     ): List<DanbooruPost>
+
+    /** Tag type-ahead, used to power the search bar's suggestion dropdown. */
+    @GET("tags/autocomplete.json")
+    suspend fun autocompleteTags(
+        @Query("search[name_matches]") query: String,
+        @Query("search[order]") order: String = "count",
+        @Query("limit") limit: Int = 12
+    ): List<DanbooruTagSuggestion>
 }
 
 object DanbooruApi {
