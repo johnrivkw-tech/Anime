@@ -27,7 +27,7 @@ class DanbooruRepository {
             .split(' ')
             .filter { it.isNotBlank() && !it.startsWith("rating:") }
 
-        return (cleaned + "rating:g,s,q,e").joinToString(" ")
+        return (cleaned + "rating:e").joinToString(" ")
     }
 
     private suspend inline fun <T> safeCall(crossinline block: suspend () -> T): Result<T> = try {
