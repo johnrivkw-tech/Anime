@@ -86,6 +86,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.animetracker.ui.components.AnimeSectionRow
 import com.example.animetracker.ui.model.AvatarFrame
+import com.example.animetracker.ui.model.AvatarGlowHalo
 import com.example.animetracker.ui.model.Faction
 import com.example.animetracker.ui.model.FavoriteAnimePick
 import com.example.animetracker.ui.model.FavoriteCharacterPick
@@ -578,6 +579,7 @@ private fun ProfileHeader(
         ) {
             Box {
                 val frameBrush = avatarFrame.brush()
+                AvatarGlowHalo(frame = avatarFrame, avatarSize = 84.dp)
                 Surface(
                     modifier = Modifier
                         .size(84.dp)
