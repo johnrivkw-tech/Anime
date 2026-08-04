@@ -52,6 +52,8 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.SpaceDashboard
+import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
@@ -64,6 +66,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -103,6 +107,14 @@ import coil.compose.AsyncImage
 import com.example.animetracker.BuildConfig
 import com.example.animetracker.data.MalXmlPort
 import com.example.animetracker.ui.components.ReiWordmark
+import com.example.animetracker.ui.model.AvatarFrame
+import com.example.animetracker.ui.model.brush
+import com.example.animetracker.ui.model.GachaRarity
+import com.example.animetracker.ui.model.NameGradient
+import com.example.animetracker.ui.model.rarityForBerriesCost
+import com.example.animetracker.ui.model.textStyle
+import com.example.animetracker.ui.navigation.Destination
+import com.example.animetracker.ui.navigation.NavBarStyle
 import com.example.animetracker.ui.model.currentRank
 import com.example.animetracker.ui.theme.AppThemeOption
 import com.example.animetracker.viewmodel.AnimeViewModel
@@ -118,7 +130,9 @@ private enum class SettingsSection(
     val subtitle: String,
     val icon: ImageVector
 ) {
-    APPEARANCE("Appearance", "Theme and accent color", Icons.Filled.Palette),
+    APPEARANCE("Appearance", "Theme, accent color, and background", Icons.Filled.Palette),
+    HOME_LAYOUT("Home Layout", "Choose which rows show on Home", Icons.Filled.SpaceDashboard),
+    BERRIES_SHOP("Berries Shop", "Spend berries on exclusive cosmetics", Icons.Filled.Storefront),
     CONTENT_FILTERS("Content Filters", "Age and mature content", Icons.Filled.Shield),
     NOTIFICATIONS("Notifications", "Reminders and alerts", Icons.Filled.NotificationsActive),
     BEHAVIOR("Playback & Behavior", "Motion, haptics, data usage", Icons.Filled.Tune),
@@ -186,6 +200,8 @@ fun SettingsScreen(viewModel: AnimeViewModel) {
                 ) {
                     when (section) {
                         SettingsSection.APPEARANCE -> AppearanceTab(viewModel)
+                        SettingsSection.HOME_LAYOUT -> HomeLayoutTab(viewModel)
+                        SettingsSection.BERRIES_SHOP -> BerriesShopTab(viewModel)
                         SettingsSection.CONTENT_FILTERS -> ContentFiltersTab(viewModel)
                         SettingsSection.NOTIFICATIONS -> NotificationsTab(viewModel)
                         SettingsSection.BEHAVIOR -> BehaviorTab(viewModel)
@@ -233,10 +249,19 @@ private fun SettingsMenuList(viewModel: AnimeViewModel, onSectionSelected: (Sett
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            SectionLabel("Shop")
+            SettingsGroupCard(
+                sections = listOf(SettingsSection.BERRIES_SHOP),
+                onSectionSelected = onSectionSelected
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             SectionLabel("Preferences")
             SettingsGroupCard(
                 sections = listOf(
                     SettingsSection.APPEARANCE,
+                    SettingsSection.HOME_LAYOUT,
                     SettingsSection.CONTENT_FILTERS,
                     SettingsSection.NOTIFICATIONS,
                     SettingsSection.BEHAVIOR,
@@ -331,7 +356,10 @@ private fun ProfileHeaderCard(viewModel: AnimeViewModel) {
     val displayName by viewModel.profileDisplayName.collectAsState()
     val faction by viewModel.faction.collectAsState()
     val stats by viewModel.profileStats.collectAsState()
+    val avatarFrame by viewModel.avatarFrame.collectAsState()
+    val nameGradient by viewModel.nameGradient.collectAsState()
     val rankTitle = currentRank(faction, stats.completed)?.title ?: "Unranked"
+    val frameBrush = avatarFrame.brush()
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -360,20 +388,16 @@ private fun ProfileHeaderCard(viewModel: AnimeViewModel) {
                 modifier = Modifier
                     .size(64.dp)
                     .clip(CircleShape)
-                    .border(
-                        width = 2.dp,
-                        brush = Brush.linearGradient(
-                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
-                        ),
-                        shape = CircleShape
+                    .then(
+                        if (avatarFrame.glow) {
+                            Modifier.border(width = 3.dp, brush = frameBrush, shape = CircleShape)
+                        } else {
+                            Modifier.border(width = 2.dp, brush = frameBrush, shape = CircleShape)
+                        }
                     )
                     .padding(3.dp)
                     .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
-                        )
-                    ),
+                    .background(frameBrush),
                 contentAlignment = Alignment.Center
             ) {
                 if (avatarPath != null) {
@@ -402,7 +426,7 @@ private fun ProfileHeaderCard(viewModel: AnimeViewModel) {
             ) {
                 Text(
                     text = displayName.ifBlank { "Anime Fan" },
-                    style = MaterialTheme.typography.titleMedium,
+                    style = nameGradient.textStyle(MaterialTheme.typography.titleMedium),
                     fontWeight = FontWeight.Bold
                 )
                 Text(
@@ -495,6 +519,9 @@ private fun SettingsMenuRow(section: SettingsSection, accent: Color, onClick: ()
 @Composable
 private fun AppearanceTab(viewModel: AnimeViewModel) {
     val selectedTheme by viewModel.themeOption.collectAsState()
+    val unlockedThemeNames by viewModel.unlockedThemeNames.collectAsState()
+    val lockedCount = AppThemeOption.entries.count { it.berriesCost > 0 && !unlockedThemeNames.contains(it.name) }
+    val visibleThemes = AppThemeOption.entries.filter { it.berriesCost <= 0 || unlockedThemeNames.contains(it.name) }
 
     Text(
         text = "Theme",
@@ -509,9 +536,602 @@ private fun AppearanceTab(viewModel: AnimeViewModel) {
     )
 
     ThemeGrid(
+        themes = visibleThemes,
         selectedTheme = selectedTheme,
         onThemeSelected = { viewModel.setTheme(it) }
     )
+
+    if (lockedCount > 0) {
+        Text(
+            text = "$lockedCount more exclusive ${if (lockedCount == 1) "theme" else "themes"} in the Berries Shop",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(top = 12.dp)
+        )
+    }
+
+    Spacer(modifier = Modifier.height(28.dp))
+
+    val trueBlack by viewModel.trueBlackBackground.collectAsState()
+
+    Text(
+        text = "Background",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold
+    )
+    Text(
+        text = "True Black saves battery on OLED screens. Midnight adds a bit of depth behind cards.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+    )
+    SettingsChoicePicker(
+        options = listOf("True Black" to true, "Midnight" to false),
+        selected = trueBlack,
+        onSelected = { viewModel.setTrueBlackBackground(it) }
+    )
+}
+
+@Composable
+private fun HomeLayoutTab(viewModel: AnimeViewModel) {
+    val showNewReleases by viewModel.showNewReleases.collectAsState()
+    val showPopularSeason by viewModel.showPopularSeason.collectAsState()
+    val showTopRated by viewModel.showTopRated.collectAsState()
+    val showTrendingNow by viewModel.showTrendingNow.collectAsState()
+    val showRecommended by viewModel.showRecommended.collectAsState()
+    val showAiPicks by viewModel.showAiPicks.collectAsState()
+
+    Text(
+        text = "Home Layout",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold
+    )
+    Text(
+        text = "Turn off any row you don't want cluttering your Home feed. " +
+            "\"Continue Tracking\" always shows itself when you have something in progress.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+    )
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column {
+            SettingsSwitchRow(
+                viewModel = viewModel,
+                title = "New Releases",
+                subtitle = "Fresh premieres from AniList.",
+                checked = showNewReleases,
+                onCheckedChange = { viewModel.setShowNewReleases(it) }
+            )
+            SettingsDivider()
+            SettingsSwitchRow(
+                viewModel = viewModel,
+                title = "Popular This Season",
+                subtitle = "What's trending among AniList users right now.",
+                checked = showPopularSeason,
+                onCheckedChange = { viewModel.setShowPopularSeason(it) }
+            )
+            SettingsDivider()
+            SettingsSwitchRow(
+                viewModel = viewModel,
+                title = "Top Rated",
+                subtitle = "The highest-scored shows on AniList.",
+                checked = showTopRated,
+                onCheckedChange = { viewModel.setShowTopRated(it) }
+            )
+            SettingsDivider()
+            SettingsSwitchRow(
+                viewModel = viewModel,
+                title = "Trending Now",
+                subtitle = "What's spiking in popularity this week.",
+                checked = showTrendingNow,
+                onCheckedChange = { viewModel.setShowTrendingNow(it) }
+            )
+            SettingsDivider()
+            SettingsSwitchRow(
+                viewModel = viewModel,
+                title = "Recommended For You",
+                subtitle = "AniList's picks based on what you already track.",
+                checked = showRecommended,
+                onCheckedChange = { viewModel.setShowRecommended(it) }
+            )
+            SettingsDivider()
+            SettingsSwitchRow(
+                viewModel = viewModel,
+                title = "AI Picks For You",
+                subtitle = "Rei's own recommendations, tuned to your taste.",
+                checked = showAiPicks,
+                onCheckedChange = { viewModel.setShowAiPicks(it) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun BerriesShopTab(viewModel: AnimeViewModel) {
+    val context = LocalContext.current
+    val balance by viewModel.gachaAvailableBerries.collectAsState()
+    val unlockedThemeNames by viewModel.unlockedThemeNames.collectAsState()
+    val unlockedNavStyleNames by viewModel.unlockedNavStyleNames.collectAsState()
+    val selectedNavStyle by viewModel.navBarStyle.collectAsState()
+    val selectedTheme by viewModel.themeOption.collectAsState()
+    val unlockedAvatarFrameNames by viewModel.unlockedAvatarFrameNames.collectAsState()
+    val selectedAvatarFrame by viewModel.avatarFrame.collectAsState()
+    val unlockedNameGradientNames by viewModel.unlockedNameGradientNames.collectAsState()
+    val selectedNameGradient by viewModel.nameGradient.collectAsState()
+
+    fun isThemeUnlocked(theme: AppThemeOption) = theme.berriesCost <= 0L || unlockedThemeNames.contains(theme.name)
+    fun isNavStyleUnlocked(style: NavBarStyle) = style.berriesCost <= 0L || unlockedNavStyleNames.contains(style.name)
+    fun isAvatarFrameUnlocked(frame: AvatarFrame) = frame.berriesCost <= 0L || unlockedAvatarFrameNames.contains(frame.name)
+    fun isNameGradientUnlocked(gradient: NameGradient) = gradient.berriesCost <= 0L || unlockedNameGradientNames.contains(gradient.name)
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(bottom = 4.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Filled.MonetizationOn,
+            contentDescription = null,
+            tint = Color(0xFFFFC947),
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "%,d Berries".format(balance),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+    }
+    Text(
+        text = "Earned from watching episodes and completing shows. Spend them here on exclusive cosmetics, or in Games on gacha pulls.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
+    )
+
+    Text(
+        text = "Nav Bar Styles",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold
+    )
+    Text(
+        text = "Change the look of the bar at the bottom of the screen.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        NavBarStyle.entries.forEach { style ->
+            NavStyleShopCard(
+                style = style,
+                owned = isNavStyleUnlocked(style),
+                selected = style == selectedNavStyle,
+                canAfford = balance >= style.berriesCost,
+                onSelect = { viewModel.selectNavBarStyle(style) },
+                onPurchase = {
+                    val ok = viewModel.purchaseNavStyle(style)
+                    if (!ok) {
+                        Toast.makeText(context, "Not enough berries yet — keep watching!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(28.dp))
+
+    Text(
+        text = "Avatar Frames",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold
+    )
+    Text(
+        text = "A decorative ring around your profile photo, in Settings and on your Profile page.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        AvatarFrame.entries.filter { it.berriesCost > 0 }.forEach { frame ->
+            AvatarFrameShopCard(
+                frame = frame,
+                owned = isAvatarFrameUnlocked(frame),
+                selected = frame == selectedAvatarFrame,
+                canAfford = balance >= frame.berriesCost,
+                onSelect = { viewModel.selectAvatarFrame(frame) },
+                onPurchase = {
+                    val ok = viewModel.purchaseAvatarFrame(frame)
+                    if (!ok) {
+                        Toast.makeText(context, "Not enough berries yet — keep watching!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(28.dp))
+
+    Text(
+        text = "Name Gradient",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold
+    )
+    Text(
+        text = "Recolor your display name wherever it shows. Legendary Blaze adds a moving gold shine and a fire glow.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        NameGradient.entries.filter { it.berriesCost > 0 }.forEach { gradient ->
+            NameGradientShopCard(
+                gradient = gradient,
+                owned = isNameGradientUnlocked(gradient),
+                selected = gradient == selectedNameGradient,
+                canAfford = balance >= gradient.berriesCost,
+                onSelect = { viewModel.selectNameGradient(gradient) },
+                onPurchase = {
+                    val ok = viewModel.purchaseNameGradient(gradient)
+                    if (!ok) {
+                        Toast.makeText(context, "Not enough berries yet — keep watching!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(28.dp))
+
+    Text(
+        text = "Exclusive Themes",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold
+    )
+    Text(
+        text = "Rare accent colors you won't find in the free Appearance picker.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        AppThemeOption.entries.filter { it.berriesCost > 0 }.forEach { theme ->
+            ThemeShopCard(
+                theme = theme,
+                owned = isThemeUnlocked(theme),
+                selected = theme == selectedTheme,
+                canAfford = balance >= theme.berriesCost,
+                onSelect = { viewModel.setTheme(theme) },
+                onPurchase = {
+                    val ok = viewModel.purchaseTheme(theme)
+                    if (!ok) {
+                        Toast.makeText(context, "Not enough berries yet — keep watching!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            )
+        }
+    }
+}
+
+/** A small colored label ("RARE", "LEGENDARY", "MYTHIC"...) borrowed from
+ *  the gacha's own rarity ladder, so a cosmetic's price tier reads as the
+ *  same status signal a big pull already carries. Free items get nothing. */
+@Composable
+private fun RarityTag(cost: Long) {
+    if (cost <= 0L) return
+    val rarity = rarityForBerriesCost(cost)
+    Text(
+        text = rarity.label.uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Bold,
+        color = Color(rarity.colorHex),
+        letterSpacing = 1.sp,
+        modifier = Modifier.padding(top = 2.dp, bottom = 2.dp)
+    )
+}
+
+/** Legendary and Mythic cosmetics get a faint glowing card border in their
+ *  rarity color, so the flagship items read as special at a glance and
+ *  not just via the text tag. Everything below that tier is unadorned. */
+@Composable
+private fun rarityCardBorder(cost: Long): Modifier {
+    val rarity = rarityForBerriesCost(cost)
+    return if (rarity == GachaRarity.LEGENDARY || rarity == GachaRarity.MYTHIC) {
+        Modifier.border(
+            width = if (rarity == GachaRarity.MYTHIC) 1.5.dp else 1.dp,
+            color = Color(rarity.colorHex).copy(alpha = if (rarity == GachaRarity.MYTHIC) 0.7f else 0.5f),
+            shape = RoundedCornerShape(16.dp)
+        )
+    } else {
+        Modifier
+    }
+}
+
+@Composable
+private fun NavStyleShopCard(
+    style: NavBarStyle,
+    owned: Boolean,
+    selected: Boolean,
+    canAfford: Boolean,
+    onSelect: () -> Unit,
+    onPurchase: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(rarityCardBorder(style.berriesCost))
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp)
+        ) {
+            // Tiny live preview swatch of the bar treatment itself.
+            Box(
+                modifier = Modifier
+                    .size(width = 56.dp, height = 32.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        when (style) {
+                            NavBarStyle.SOLID -> Brush.linearGradient(
+                                listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface)
+                            )
+                            NavBarStyle.GRADIENT -> Brush.horizontalGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f)
+                                )
+                            )
+                            NavBarStyle.GLASS -> Brush.linearGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.4f),
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                                )
+                            )
+                        }
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = if (style == NavBarStyle.SOLID) 0.2f else 0.6f),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = style.displayName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                RarityTag(style.berriesCost)
+                Text(
+                    text = style.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            ShopActionButton(
+                owned = owned,
+                selected = selected,
+                cost = style.berriesCost,
+                canAfford = canAfford,
+                onSelect = onSelect,
+                onPurchase = onPurchase
+            )
+        }
+    }
+}
+
+@Composable
+private fun ThemeShopCard(
+    theme: AppThemeOption,
+    owned: Boolean,
+    selected: Boolean,
+    canAfford: Boolean,
+    onSelect: () -> Unit,
+    onPurchase: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(rarityCardBorder(theme.berriesCost))
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(width = 56.dp, height = 32.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Brush.horizontalGradient(listOf(theme.primary, theme.secondary)))
+                    .border(width = 1.dp, color = theme.primary.copy(alpha = 0.6f), shape = RoundedCornerShape(10.dp))
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = theme.displayName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                RarityTag(theme.berriesCost)
+                Text(
+                    text = "Exclusive accent + surface palette",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            ShopActionButton(
+                owned = owned,
+                selected = selected,
+                cost = theme.berriesCost,
+                canAfford = canAfford,
+                onSelect = onSelect,
+                onPurchase = onPurchase
+            )
+        }
+    }
+}
+
+@Composable
+private fun AvatarFrameShopCard(
+    frame: AvatarFrame,
+    owned: Boolean,
+    selected: Boolean,
+    canAfford: Boolean,
+    onSelect: () -> Unit,
+    onPurchase: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(rarityCardBorder(frame.berriesCost))
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .border(
+                        width = if (frame.glow) 3.dp else 2.dp,
+                        brush = frame.brush(),
+                        shape = CircleShape
+                    )
+                    .padding(3.dp)
+                    .clip(CircleShape)
+                    .background(frame.brush())
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = frame.displayName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                RarityTag(frame.berriesCost)
+                Text(
+                    text = "Ring for your profile photo",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            ShopActionButton(
+                owned = owned,
+                selected = selected,
+                cost = frame.berriesCost,
+                canAfford = canAfford,
+                onSelect = onSelect,
+                onPurchase = onPurchase
+            )
+        }
+    }
+}
+
+@Composable
+private fun NameGradientShopCard(
+    gradient: NameGradient,
+    owned: Boolean,
+    selected: Boolean,
+    canAfford: Boolean,
+    onSelect: () -> Unit,
+    onPurchase: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(rarityCardBorder(gradient.berriesCost))
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp)
+        ) {
+            // Live preview — this renders through the exact same
+            // textStyle() the real name uses, shine/glow included, so
+            // what's shown here is exactly what you'd get.
+            Box(
+                modifier = Modifier
+                    .size(width = 56.dp, height = 32.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.background),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Aa",
+                    style = gradient.textStyle(MaterialTheme.typography.titleLarge),
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = gradient.displayName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                RarityTag(gradient.berriesCost)
+                Text(
+                    text = if (gradient.fireGlow) "Animated shine + fire glow" else "Colors your display name",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            ShopActionButton(
+                owned = owned,
+                selected = selected,
+                cost = gradient.berriesCost,
+                canAfford = canAfford,
+                onSelect = onSelect,
+                onPurchase = onPurchase
+            )
+        }
+    }
+}
+
+/** The right-edge control on a shop card: locked+price, unlocked+selectable, or already-selected. */
+@Composable
+private fun ShopActionButton(
+    owned: Boolean,
+    selected: Boolean,
+    cost: Long,
+    canAfford: Boolean,
+    onSelect: () -> Unit,
+    onPurchase: () -> Unit
+) {
+    when {
+        selected -> AssistChip(
+            onClick = {},
+            enabled = false,
+            leadingIcon = {
+                Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+            },
+            label = { Text("Active") }
+        )
+        owned -> OutlinedButton(onClick = onSelect) {
+            Text("Select")
+        }
+        else -> Button(
+            onClick = onPurchase,
+            enabled = canAfford,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        ) {
+            Icon(Icons.Filled.Lock, contentDescription = null, modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+            Text("%,d".format(cost))
+        }
+    }
 }
 
 @Composable
@@ -639,6 +1259,31 @@ private fun BehaviorTab(viewModel: AnimeViewModel) {
             )
         }
     }
+
+    Spacer(modifier = Modifier.height(28.dp))
+
+    val defaultStartRoute by viewModel.defaultStartRoute.collectAsState()
+
+    Text(
+        text = "Default Start Tab",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold
+    )
+    Text(
+        text = "Which tab Rei opens on when you launch the app.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+    )
+    SettingsChoicePicker(
+        options = listOf(
+            "Home" to Destination.HOME.route,
+            "Schedule" to Destination.SCHEDULE.route,
+            "My List" to Destination.MY_LIST.route
+        ),
+        selected = defaultStartRoute,
+        onSelected = { viewModel.setDefaultStartRoute(it) }
+    )
 }
 
 private data class PersonalityPreset(val label: String, val prompt: String)
@@ -1388,14 +2033,44 @@ private fun SettingsSwitchRow(
     }
 }
 
+/** A row of mutually-exclusive filter chips for small enum-style choices
+ *  (background style, default start tab, etc.) — lighter weight than a
+ *  full picker dialog for a 2-3 option pick. */
+@Composable
+private fun <T> SettingsChoicePicker(
+    options: List<Pair<String, T>>,
+    selected: T,
+    onSelected: (T) -> Unit
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        options.forEach { (label, value) ->
+            val isSelected = value == selected
+            FilterChip(
+                selected = isSelected,
+                onClick = { onSelected(value) },
+                label = { Text(label) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
+                    selectedLabelColor = MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
 @Composable
 private fun ThemeGrid(
+    themes: List<AppThemeOption>,
     selectedTheme: AppThemeOption,
     onThemeSelected: (AppThemeOption) -> Unit
 ) {
     val columns = 3
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        AppThemeOption.entries.toList().chunked(columns).forEach { row ->
+        themes.chunked(columns).forEach { row ->
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth()
