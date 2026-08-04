@@ -27,6 +27,14 @@ enum class NameGradient(
     val colors: List<Color>,
     val shine: Boolean = false,
     val fireGlow: Boolean = false,
+    val glowColor: Color = Color(0xFFFF6A00),
+    /** Speed multiplier for the shine sweep + flicker on [shine] tiers.
+     *  1f matches the original Legendary Blaze pace; higher runs faster. */
+    val speed: Float = 1f,
+    /** Multiplier on the flickering glow's blur radius. 1f matches the
+     *  original Legendary Blaze halo size; higher makes the glow bigger
+     *  and softer, not just brighter. */
+    val glowIntensity: Float = 1f,
     val berriesCost: Long = 0,
 ) {
     Classic(
@@ -65,7 +73,170 @@ enum class NameGradient(
         ),
         shine = true,
         fireGlow = true,
+        glowColor = Color(0xFFFF6A00),
         berriesCost = 5000L,
+    ),
+    VoidEclipse(
+        displayName = "Void Eclipse",
+        colors = listOf(
+            Color(0xFFE0C9FF),
+            Color(0xFFB566FF),
+            Color(0xFF2A0845),
+            Color(0xFFB566FF),
+            Color(0xFFE0C9FF)
+        ),
+        shine = true,
+        fireGlow = true,
+        glowColor = Color(0xFF9B30FF),
+        berriesCost = 5500L,
+    ),
+    FrostCrown(
+        displayName = "Frost Crown",
+        colors = listOf(
+            Color(0xFFFFFFFF),
+            Color(0xFFBEE8FF),
+            Color(0xFF4FC3F7),
+            Color(0xFFBEE8FF),
+            Color(0xFFFFFFFF)
+        ),
+        shine = true,
+        fireGlow = true,
+        glowColor = Color(0xFF7FDBFF),
+        berriesCost = 5500L,
+    ),
+    AbyssalTide(
+        displayName = "Abyssal Tide",
+        colors = listOf(
+            Color(0xFFB2FFF5),
+            Color(0xFF00C2A8),
+            Color(0xFF014D4E),
+            Color(0xFF00C2A8),
+            Color(0xFFB2FFF5)
+        ),
+        shine = true,
+        fireGlow = true,
+        glowColor = Color(0xFF00C2A8),
+        berriesCost = 5500L,
+    ),
+    CrimsonRegalia(
+        displayName = "Crimson Regalia",
+        colors = listOf(
+            Color(0xFFFFD1D1),
+            Color(0xFFFF3B5C),
+            Color(0xFF7A0C1E),
+            Color(0xFFFF3B5C),
+            Color(0xFFFFD1D1)
+        ),
+        shine = true,
+        fireGlow = true,
+        glowColor = Color(0xFFFF3B5C),
+        berriesCost = 6000L,
+    ),
+    InfernoRush(
+        displayName = "Inferno Rush",
+        colors = listOf(
+            Color(0xFFFFF3B0),
+            Color(0xFFFF5A1F),
+            Color(0xFF7A0C00),
+            Color(0xFFFF5A1F),
+            Color(0xFFFFF3B0)
+        ),
+        shine = true,
+        fireGlow = true,
+        glowColor = Color(0xFFFF3D00),
+        speed = 2.2f,
+        berriesCost = 6500L,
+    ),
+    CrimsonWildfire(
+        displayName = "Crimson Wildfire",
+        colors = listOf(
+            Color(0xFFFFD4B8),
+            Color(0xFFFF2D2D),
+            Color(0xFF3D0000),
+            Color(0xFFFF2D2D),
+            Color(0xFFFFD4B8)
+        ),
+        shine = true,
+        fireGlow = true,
+        glowColor = Color(0xFFFF1A1A),
+        speed = 2.6f,
+        berriesCost = 7000L,
+    ),
+    GlacialFrost(
+        displayName = "Glacial Frost",
+        colors = listOf(
+            Color(0xFFFFFFFF),
+            Color(0xFF8FE3FF),
+            Color(0xFF1E6FE0),
+            Color(0xFF8FE3FF),
+            Color(0xFFFFFFFF)
+        ),
+        shine = true,
+        fireGlow = true,
+        glowColor = Color(0xFF4FC3F7),
+        speed = 1f,
+        berriesCost = 5500L,
+    ),
+    EmeraldPulse(
+        displayName = "Emerald Pulse",
+        colors = listOf(Color(0xFF34D399), Color(0xFF065F46)),
+        berriesCost = 1000L,
+    ),
+    CosmicDrift(
+        displayName = "Cosmic Drift",
+        colors = listOf(Color(0xFF6366F1), Color(0xFF1E1B4B)),
+        berriesCost = 1200L,
+    ),
+    GoldenHour(
+        displayName = "Golden Hour",
+        colors = listOf(Color(0xFFFFE08A), Color(0xFFB8860B)),
+        berriesCost = 900L,
+    ),
+    NeonTokyo(
+        displayName = "Neon Tokyo",
+        colors = listOf(Color(0xFFFF3CAC), Color(0xFF2B86C5)),
+        berriesCost = 1100L,
+    ),
+    StormSurge(
+        displayName = "Storm Surge",
+        colors = listOf(Color(0xFFB0BEC5), Color(0xFF37474F)),
+        berriesCost = 800L,
+    ),
+    SakuraBloom(
+        displayName = "Sakura Bloom",
+        colors = listOf(Color(0xFFFFD1E8), Color(0xFFF472B6)),
+        berriesCost = 850L,
+    ),
+    Starlight(
+        displayName = "Starlight",
+        colors = listOf(
+            Color(0xFFFFFFFF),
+            Color(0xFFD9D9F5),
+            Color(0xFFB8B8E8),
+            Color(0xFFD9D9F5),
+            Color(0xFFFFFFFF)
+        ),
+        shine = true,
+        fireGlow = false,
+        speed = 1f,
+        berriesCost = 3000L,
+    ),
+    Prismatic(
+        displayName = "Prismatic",
+        colors = listOf(
+            Color(0xFFFFF3B0),
+            Color(0xFFFFFFFF),
+            Color(0xFFFF9CEE),
+            Color(0xFFB566FF),
+            Color(0xFF7FDBFF),
+            Color(0xFFFFF3B0)
+        ),
+        shine = true,
+        fireGlow = true,
+        glowColor = Color(0xFFFFFFFF),
+        speed = 1.4f,
+        glowIntensity = 1.8f,
+        berriesCost = 15000L,
     ),
 }
 
@@ -90,16 +261,16 @@ fun NameGradient.textStyle(base: TextStyle): TextStyle {
         initialValue = -300f,
         targetValue = 300f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2000, easing = LinearEasing),
+            animation = tween(durationMillis = (2000 / speed).toInt(), easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "sweepOffset"
     )
     val flickerBlur by transition.animateFloat(
-        initialValue = 8f,
-        targetValue = 18f,
+        initialValue = 8f * glowIntensity,
+        targetValue = 18f * glowIntensity,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 550, easing = LinearEasing),
+            animation = tween(durationMillis = (550 / speed).toInt(), easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "flickerBlur"
@@ -114,7 +285,7 @@ fun NameGradient.textStyle(base: TextStyle): TextStyle {
         ),
         shadow = if (fireGlow) {
             Shadow(
-                color = Color(0xFFFF6A00).copy(alpha = 0.85f),
+                color = glowColor.copy(alpha = 0.85f),
                 offset = Offset(0f, 0f),
                 blurRadius = flickerBlur
             )
