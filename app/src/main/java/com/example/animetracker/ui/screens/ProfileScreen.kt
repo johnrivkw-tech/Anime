@@ -85,16 +85,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.animetracker.ui.components.AnimeSectionRow
+import com.example.animetracker.ui.model.AvatarFrame
 import com.example.animetracker.ui.model.Faction
 import com.example.animetracker.ui.model.FavoriteAnimePick
 import com.example.animetracker.ui.model.FavoriteCharacterPick
 import com.example.animetracker.ui.model.GenreCount
 import com.example.animetracker.ui.model.MAX_FAVORITE_PICKS
+import com.example.animetracker.ui.model.NameGradient
 import com.example.animetracker.ui.model.ProfileStats
 import com.example.animetracker.ui.model.RankTier
+import com.example.animetracker.ui.model.brush
 import com.example.animetracker.ui.model.currentRank
 import com.example.animetracker.ui.model.nextRank
 import com.example.animetracker.ui.model.ranksFor
+import com.example.animetracker.ui.model.textStyle
 import com.example.animetracker.ui.theme.Bone
 import com.example.animetracker.ui.theme.Smoke
 import com.example.animetracker.viewmodel.AnimeViewModel
@@ -115,6 +119,8 @@ fun ProfileScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}, o
     val stats by viewModel.profileStats.collectAsState()
     val favorites by viewModel.favoriteAnime.collectAsState()
     val faction by viewModel.faction.collectAsState()
+    val avatarFrame by viewModel.avatarFrame.collectAsState()
+    val nameGradient by viewModel.nameGradient.collectAsState()
 
     val favoriteAnimePicks by viewModel.favoriteAnimePicks.collectAsState()
     val favoriteCharacterPicks by viewModel.favoriteCharacterPicks.collectAsState()
@@ -162,6 +168,8 @@ fun ProfileScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}, o
                 ProfileHeader(
                     bannerPath = bannerPath,
                     avatarPath = avatarPath,
+                    avatarFrame = avatarFrame,
+                    nameGradient = nameGradient,
                     isBannerSaving = isBannerSaving,
                     isAvatarSaving = isAvatarSaving,
                     displayName = displayName,
@@ -504,6 +512,8 @@ private fun SectionLabel(text: String) {
 private fun ProfileHeader(
     bannerPath: String?,
     avatarPath: String?,
+    avatarFrame: AvatarFrame,
+    nameGradient: NameGradient,
     isBannerSaving: Boolean,
     isAvatarSaving: Boolean,
     displayName: String,
@@ -567,11 +577,16 @@ private fun ProfileHeader(
             verticalAlignment = Alignment.Bottom
         ) {
             Box {
+                val frameBrush = avatarFrame.brush()
                 Surface(
                     modifier = Modifier
                         .size(84.dp)
                         .clip(CircleShape)
-                        .border(3.dp, MaterialTheme.colorScheme.background, CircleShape),
+                        .border(
+                            width = if (avatarFrame.glow) 4.dp else 3.dp,
+                            brush = frameBrush,
+                            shape = CircleShape
+                        ),
                     color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     if (avatarPath != null) {
@@ -615,7 +630,7 @@ private fun ProfileHeader(
         }
 
         Column(modifier = Modifier.padding(horizontal = 16.dp).offset(y = (-28).dp)) {
-            EditableDisplayName(displayName = displayName, rank = rank, onNameChanged = onNameChanged)
+            EditableDisplayName(displayName = displayName, rank = rank, nameGradient = nameGradient, onNameChanged = onNameChanged)
             Text(
                 text = "Member since ${formatJoinedDate(joinedAtMillis)}",
                 style = MaterialTheme.typography.bodySmall,
@@ -626,7 +641,7 @@ private fun ProfileHeader(
 }
 
 @Composable
-private fun EditableDisplayName(displayName: String, rank: RankTier?, onNameChanged: (String) -> Unit) {
+private fun EditableDisplayName(displayName: String, rank: RankTier?, nameGradient: NameGradient, onNameChanged: (String) -> Unit) {
     var isEditing by rememberSaveable { mutableStateOf(false) }
     var draft by remember(displayName) { mutableStateOf(displayName) }
 
@@ -655,7 +670,7 @@ private fun EditableDisplayName(displayName: String, rank: RankTier?, onNameChan
         ) {
             Text(
                 text = displayName.ifBlank { "Add your name" },
-                style = MaterialTheme.typography.headlineSmall,
+                style = nameGradient.textStyle(MaterialTheme.typography.headlineSmall),
                 fontWeight = FontWeight.ExtraBold,
                 color = if (displayName.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else Bone,
                 maxLines = 1,
