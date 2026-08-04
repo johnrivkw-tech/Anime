@@ -18,6 +18,19 @@ enum class GachaRarity(val label: String, val weight: Double, val colorHex: Long
     COMMON("Common", 0.60, 0xFF9E9E9E)
 }
 
+/**
+ * Maps a cosmetic's berries price to a [GachaRarity] tier so shop items
+ * can borrow the same rarity color/label ladder as gacha pulls. Bucketed
+ * against the actual cosmetic price spread (roughly 600–20000 berries).
+ */
+fun rarityForBerriesCost(cost: Long): GachaRarity = when {
+    cost >= 5000L -> GachaRarity.MYTHIC
+    cost >= 2500L -> GachaRarity.LEGENDARY
+    cost >= 1500L -> GachaRarity.EPIC
+    cost >= 800L -> GachaRarity.RARE
+    else -> GachaRarity.COMMON
+}
+
 /** A single pullable character, resolved from AniList data + a rarity tier. */
 data class GachaCharacter(
     val id: Int,
