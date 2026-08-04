@@ -51,6 +51,16 @@ fun HomeFeedScreen(
     val isLoadingAiRecs by viewModel.isLoadingAiRecommendations.collectAsState()
     val aiRecsError by viewModel.aiRecommendationsError.collectAsState()
 
+    // Home Layout settings — lets people trim rows they don't care about
+    // out of the scroll. "Continue Tracking" isn't included here since it
+    // already hides itself automatically when there's nothing to show.
+    val showNewReleases by viewModel.showNewReleases.collectAsState()
+    val showPopularSeason by viewModel.showPopularSeason.collectAsState()
+    val showTopRated by viewModel.showTopRated.collectAsState()
+    val showTrendingNow by viewModel.showTrendingNow.collectAsState()
+    val showRecommended by viewModel.showRecommended.collectAsState()
+    val showAiPicks by viewModel.showAiPicks.collectAsState()
+
     val trendingItems = remember(trending, localByAniListId) {
         trending.map { it.toHomeCardItem(localByAniListId[it.id]) }
     }
@@ -124,56 +134,68 @@ fun HomeFeedScreen(
                         )
                     }
                 }
-                item {
-                    AnimeSectionRow(
-                        title = "New Releases",
-                        items = newReleaseItems,
-                        isLoading = isLoading && newReleaseItems.isEmpty(),
-                        onItemClick = { it.aniListId?.let(onAnimeClick) }
-                    )
+                if (showNewReleases) {
+                    item {
+                        AnimeSectionRow(
+                            title = "New Releases",
+                            items = newReleaseItems,
+                            isLoading = isLoading && newReleaseItems.isEmpty(),
+                            onItemClick = { it.aniListId?.let(onAnimeClick) }
+                        )
+                    }
                 }
-                item {
-                    AnimeSectionRow(
-                        title = "Popular This Season",
-                        items = popularItems,
-                        isLoading = isLoading && popularItems.isEmpty(),
-                        onItemClick = { it.aniListId?.let(onAnimeClick) }
-                    )
+                if (showPopularSeason) {
+                    item {
+                        AnimeSectionRow(
+                            title = "Popular This Season",
+                            items = popularItems,
+                            isLoading = isLoading && popularItems.isEmpty(),
+                            onItemClick = { it.aniListId?.let(onAnimeClick) }
+                        )
+                    }
                 }
-                item {
-                    AnimeSectionRow(
-                        title = "Top Rated",
-                        items = topRatedItems,
-                        isLoading = isLoading && topRatedItems.isEmpty(),
-                        onItemClick = { it.aniListId?.let(onAnimeClick) }
-                    )
+                if (showTopRated) {
+                    item {
+                        AnimeSectionRow(
+                            title = "Top Rated",
+                            items = topRatedItems,
+                            isLoading = isLoading && topRatedItems.isEmpty(),
+                            onItemClick = { it.aniListId?.let(onAnimeClick) }
+                        )
+                    }
                 }
-                item {
-                    AnimeSectionRow(
-                        title = "Trending Now",
-                        items = trendingItems,
-                        isLoading = isLoading && trendingItems.isEmpty(),
-                        onItemClick = { it.aniListId?.let(onAnimeClick) }
-                    )
+                if (showTrendingNow) {
+                    item {
+                        AnimeSectionRow(
+                            title = "Trending Now",
+                            items = trendingItems,
+                            isLoading = isLoading && trendingItems.isEmpty(),
+                            onItemClick = { it.aniListId?.let(onAnimeClick) }
+                        )
+                    }
                 }
-                item {
-                    AnimeSectionRow(
-                        title = "Recommended For You",
-                        items = recommendedItems,
-                        isLoading = isLoading && recommendedItems.isEmpty(),
-                        onItemClick = { it.aniListId?.let(onAnimeClick) }
-                    )
+                if (showRecommended) {
+                    item {
+                        AnimeSectionRow(
+                            title = "Recommended For You",
+                            items = recommendedItems,
+                            isLoading = isLoading && recommendedItems.isEmpty(),
+                            onItemClick = { it.aniListId?.let(onAnimeClick) }
+                        )
+                    }
                 }
-                item {
-                    AnimeSectionRow(
-                        title = "AI Picks For You",
-                        items = aiRecommendations,
-                        isLoading = isLoadingAiRecs,
-                        onItemClick = { it.aniListId?.let(onAnimeClick) },
-                        emptyMessage = aiRecsError
-                            ?: "Track a few anime to unlock AI picks based on your taste"
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+                if (showAiPicks) {
+                    item {
+                        AnimeSectionRow(
+                            title = "AI Picks For You",
+                            items = aiRecommendations,
+                            isLoading = isLoadingAiRecs,
+                            onItemClick = { it.aniListId?.let(onAnimeClick) },
+                            emptyMessage = aiRecsError
+                                ?: "Track a few anime to unlock AI picks based on your taste"
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
                 }
             }
         }
