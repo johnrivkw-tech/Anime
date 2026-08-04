@@ -7,8 +7,14 @@ import androidx.compose.runtime.Composable
 @Composable
 fun AnimeTrackerTheme(
     themeOption: AppThemeOption = AppThemeOption.Blaze,
+    // True black is best for AMOLED/battery and is the long-standing
+    // default; Midnight swaps in a soft near-black (Void) with a cool
+    // undertone for a bit more depth behind cards in low light.
+    trueBlackBackground: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    val background = if (trueBlackBackground) themeOption.background else Void
+
     val colorScheme = darkColorScheme(
         primary = themeOption.primary,
         onPrimary = Bone,
@@ -20,7 +26,7 @@ fun AnimeTrackerTheme(
         onSecondaryContainer = Bone,
         tertiary = themeOption.secondary,
         onTertiary = Bone,
-        background = themeOption.background,
+        background = background,
         onBackground = Bone,
         surface = themeOption.surface,
         onSurface = Bone,
