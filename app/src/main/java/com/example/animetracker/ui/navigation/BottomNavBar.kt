@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -45,7 +46,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 
 @Composable
-fun BottomNavBar(navController: NavHostController) {
+fun BottomNavBar(navController: NavHostController, navBarStyle: NavBarStyle = NavBarStyle.SOLID) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
@@ -59,17 +60,38 @@ fun BottomNavBar(navController: NavHostController) {
             .padding(horizontal = 16.dp)
             .padding(top = 6.dp, bottom = 4.dp)
     ) {
+        val barShape = RoundedCornerShape(32.dp)
+        val primary = MaterialTheme.colorScheme.primary
+        val secondary = MaterialTheme.colorScheme.secondary
+        val surface = MaterialTheme.colorScheme.surface
+
+        // Berries Shop cosmetic: three backdrop treatments for the same
+        // pill bar. Solid is the free default look this bar always had;
+        // Gradient and Glass are unlocked with berries and swap in a
+        // different background brush + border glow, nothing else changes.
+        val barBackground: Modifier = when (navBarStyle) {
+            NavBarStyle.SOLID -> Modifier.background(surface, barShape)
+            NavBarStyle.GRADIENT -> Modifier.background(
+                Brush.horizontalGradient(
+                    listOf(primary.copy(alpha = 0.30f), secondary.copy(alpha = 0.30f))
+                ),
+                barShape
+            ).background(surface.copy(alpha = 0.55f), barShape)
+            NavBarStyle.GLASS -> Modifier.background(surface.copy(alpha = 0.45f), barShape)
+        }
+        val borderColor = when (navBarStyle) {
+            NavBarStyle.SOLID -> MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+            NavBarStyle.GRADIENT -> primary.copy(alpha = 0.5f)
+            NavBarStyle.GLASS -> primary.copy(alpha = 0.65f)
+        }
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp)
-                .clip(RoundedCornerShape(32.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
-                    shape = RoundedCornerShape(32.dp)
-                )
+                .clip(barShape)
+                .then(barBackground)
+                .border(width = 1.dp, color = borderColor, shape = barShape)
                 .padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceEvenly
