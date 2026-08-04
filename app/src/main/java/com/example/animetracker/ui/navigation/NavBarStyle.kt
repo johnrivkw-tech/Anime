@@ -25,4 +25,19 @@ enum class NavBarStyle(
         description = "A frosted, translucent bar with a glowing edge.",
         berriesCost = 1200L,
     ),
+    FLOATING_DOTS(
+        displayName = "Floating Icons",
+        description = "Each icon floats in its own separate capsule — no connecting bar.",
+        berriesCost = 1600L,
+    ),
+    DOCK(
+        displayName = "Full Dock",
+        description = "A square-edged bar flush against the bottom edge, full width.",
+        berriesCost = 1400L,
+    ),
+    UNDERLINE(
+        displayName = "Minimal Underline",
+        description = "No bar at all — just icons with a sliding underline.",
+        berriesCost = 1800L,
+    ),
 }
