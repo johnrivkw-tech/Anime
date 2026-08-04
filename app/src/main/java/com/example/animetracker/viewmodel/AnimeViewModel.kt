@@ -26,8 +26,12 @@ import com.example.animetracker.data.PersonalityPrefs
 import com.example.animetracker.data.ContentFilterPrefs
 import com.example.animetracker.data.FactionPrefs
 import com.example.animetracker.data.AppSettingsPrefs
+import com.example.animetracker.data.CosmeticsPrefs
 import com.example.animetracker.data.AniListAuthPrefs
+import com.example.animetracker.ui.model.AvatarFrame
 import com.example.animetracker.ui.model.Faction
+import com.example.animetracker.ui.model.NameGradient
+import com.example.animetracker.ui.navigation.NavBarStyle
 import com.example.animetracker.ui.theme.AppThemeOption
 import com.example.animetracker.data.network.AniListAiringSchedule
 import com.example.animetracker.data.network.AniListCharacterEdge
@@ -104,6 +108,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val aniListAuthPrefs = AniListAuthPrefs(application)
     private val lightNovelFolderPrefs = LightNovelFolderPrefs(application)
     private val gachaPrefs = GachaPrefs(application)
+    private val cosmeticsPrefs = CosmeticsPrefs(application)
     private val mangaDisplayPrefs = MangaDisplayPrefs(application)
     private val danbooruFavoritesPrefs = DanbooruFavoritesPrefs(application)
 
@@ -580,7 +585,9 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         scanLinkedFolder()
     }
 
+    /** Selects a theme. No-ops if [theme] is a Berries Shop exclusive that hasn't been unlocked yet. */
     fun setTheme(theme: AppThemeOption) {
+        if (theme.berriesCost > 0 && !cosmeticsPrefs.getUnlockedThemeNames().contains(theme.name)) return
         themePrefs.setTheme(theme)
         _themeOption.value = theme
     }
@@ -667,6 +674,66 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     fun setDataSaver(enabled: Boolean) {
         appSettingsPrefs.setDataSaver(enabled)
         _dataSaver.value = enabled
+    }
+
+    private val _defaultStartRoute = MutableStateFlow(appSettingsPrefs.getDefaultStartRoute())
+    val defaultStartRoute: StateFlow<String> = _defaultStartRoute.asStateFlow()
+
+    fun setDefaultStartRoute(route: String) {
+        appSettingsPrefs.setDefaultStartRoute(route)
+        _defaultStartRoute.value = route
+    }
+
+    private val _trueBlackBackground = MutableStateFlow(appSettingsPrefs.getTrueBlackBackground())
+    val trueBlackBackground: StateFlow<Boolean> = _trueBlackBackground.asStateFlow()
+
+    fun setTrueBlackBackground(enabled: Boolean) {
+        appSettingsPrefs.setTrueBlackBackground(enabled)
+        _trueBlackBackground.value = enabled
+    }
+
+    // --- Home layout toggles ---
+
+    private val _showNewReleases = MutableStateFlow(appSettingsPrefs.getShowNewReleases())
+    val showNewReleases: StateFlow<Boolean> = _showNewReleases.asStateFlow()
+    fun setShowNewReleases(enabled: Boolean) {
+        appSettingsPrefs.setShowNewReleases(enabled)
+        _showNewReleases.value = enabled
+    }
+
+    private val _showPopularSeason = MutableStateFlow(appSettingsPrefs.getShowPopularSeason())
+    val showPopularSeason: StateFlow<Boolean> = _showPopularSeason.asStateFlow()
+    fun setShowPopularSeason(enabled: Boolean) {
+        appSettingsPrefs.setShowPopularSeason(enabled)
+        _showPopularSeason.value = enabled
+    }
+
+    private val _showTopRated = MutableStateFlow(appSettingsPrefs.getShowTopRated())
+    val showTopRated: StateFlow<Boolean> = _showTopRated.asStateFlow()
+    fun setShowTopRated(enabled: Boolean) {
+        appSettingsPrefs.setShowTopRated(enabled)
+        _showTopRated.value = enabled
+    }
+
+    private val _showTrendingNow = MutableStateFlow(appSettingsPrefs.getShowTrendingNow())
+    val showTrendingNow: StateFlow<Boolean> = _showTrendingNow.asStateFlow()
+    fun setShowTrendingNow(enabled: Boolean) {
+        appSettingsPrefs.setShowTrendingNow(enabled)
+        _showTrendingNow.value = enabled
+    }
+
+    private val _showRecommended = MutableStateFlow(appSettingsPrefs.getShowRecommended())
+    val showRecommended: StateFlow<Boolean> = _showRecommended.asStateFlow()
+    fun setShowRecommended(enabled: Boolean) {
+        appSettingsPrefs.setShowRecommended(enabled)
+        _showRecommended.value = enabled
+    }
+
+    private val _showAiPicks = MutableStateFlow(appSettingsPrefs.getShowAiPicks())
+    val showAiPicks: StateFlow<Boolean> = _showAiPicks.asStateFlow()
+    fun setShowAiPicks(enabled: Boolean) {
+        appSettingsPrefs.setShowAiPicks(enabled)
+        _showAiPicks.value = enabled
     }
 
     // --- AniList account sync ---
@@ -1977,5 +2044,128 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearGachaLastPull() {
         _gachaLastPull.value = emptyList()
+    }
+
+    // --- Berries Shop: cosmetic unlocks ---
+    // Spends from the same ledger as the gacha (gachaAvailableBerries /
+    // GachaPrefs.addSpentBerries) so there's one honest balance across
+    // both — no separate currency to track.
+
+    private val _unlockedThemeNames = MutableStateFlow(cosmeticsPrefs.getUnlockedThemeNames())
+    val unlockedThemeNames: StateFlow<Set<String>> = _unlockedThemeNames.asStateFlow()
+
+    private val _unlockedNavStyleNames = MutableStateFlow(cosmeticsPrefs.getUnlockedNavStyleNames())
+    val unlockedNavStyleNames: StateFlow<Set<String>> = _unlockedNavStyleNames.asStateFlow()
+
+    private val _navBarStyle = MutableStateFlow(cosmeticsPrefs.getSelectedNavStyle())
+    val navBarStyle: StateFlow<NavBarStyle> = _navBarStyle.asStateFlow()
+
+    fun isThemeUnlocked(theme: AppThemeOption): Boolean =
+        theme.berriesCost <= 0L || _unlockedThemeNames.value.contains(theme.name)
+
+    fun isNavStyleUnlocked(style: NavBarStyle): Boolean =
+        style.berriesCost <= 0L || _unlockedNavStyleNames.value.contains(style.name)
+
+    /** Spends berries to unlock [theme] and immediately applies it. False without spending if funds are short or it's already owned. */
+    fun purchaseTheme(theme: AppThemeOption): Boolean {
+        if (isThemeUnlocked(theme)) return false
+        if (gachaAvailableBerries.value < theme.berriesCost) return false
+
+        gachaPrefs.addSpentBerries(theme.berriesCost)
+        _gachaSpentBerries.value = gachaPrefs.getSpentBerries()
+
+        cosmeticsPrefs.unlockTheme(theme)
+        _unlockedThemeNames.value = cosmeticsPrefs.getUnlockedThemeNames()
+
+        themePrefs.setTheme(theme)
+        _themeOption.value = theme
+        return true
+    }
+
+    /** Spends berries to unlock [style] and immediately applies it. False without spending if funds are short or it's already owned. */
+    fun purchaseNavStyle(style: NavBarStyle): Boolean {
+        if (isNavStyleUnlocked(style)) return false
+        if (gachaAvailableBerries.value < style.berriesCost) return false
+
+        gachaPrefs.addSpentBerries(style.berriesCost)
+        _gachaSpentBerries.value = gachaPrefs.getSpentBerries()
+
+        cosmeticsPrefs.unlockNavStyle(style)
+        _unlockedNavStyleNames.value = cosmeticsPrefs.getUnlockedNavStyleNames()
+
+        cosmeticsPrefs.setSelectedNavStyle(style)
+        _navBarStyle.value = style
+        return true
+    }
+
+    /** Switches to an already-unlocked nav bar style. No-ops if [style] hasn't been purchased. */
+    fun selectNavBarStyle(style: NavBarStyle) {
+        if (!isNavStyleUnlocked(style)) return
+        cosmeticsPrefs.setSelectedNavStyle(style)
+        _navBarStyle.value = style
+    }
+
+    private val _unlockedAvatarFrameNames = MutableStateFlow(cosmeticsPrefs.getUnlockedAvatarFrameNames())
+    val unlockedAvatarFrameNames: StateFlow<Set<String>> = _unlockedAvatarFrameNames.asStateFlow()
+
+    private val _avatarFrame = MutableStateFlow(cosmeticsPrefs.getSelectedAvatarFrame())
+    val avatarFrame: StateFlow<AvatarFrame> = _avatarFrame.asStateFlow()
+
+    fun isAvatarFrameUnlocked(frame: AvatarFrame): Boolean =
+        frame.berriesCost <= 0L || _unlockedAvatarFrameNames.value.contains(frame.name)
+
+    /** Spends berries to unlock [frame] and immediately applies it. False without spending if funds are short or it's already owned. */
+    fun purchaseAvatarFrame(frame: AvatarFrame): Boolean {
+        if (isAvatarFrameUnlocked(frame)) return false
+        if (gachaAvailableBerries.value < frame.berriesCost) return false
+
+        gachaPrefs.addSpentBerries(frame.berriesCost)
+        _gachaSpentBerries.value = gachaPrefs.getSpentBerries()
+
+        cosmeticsPrefs.unlockAvatarFrame(frame)
+        _unlockedAvatarFrameNames.value = cosmeticsPrefs.getUnlockedAvatarFrameNames()
+
+        cosmeticsPrefs.setSelectedAvatarFrame(frame)
+        _avatarFrame.value = frame
+        return true
+    }
+
+    /** Switches to an already-unlocked avatar frame. No-ops if [frame] hasn't been purchased. */
+    fun selectAvatarFrame(frame: AvatarFrame) {
+        if (!isAvatarFrameUnlocked(frame)) return
+        cosmeticsPrefs.setSelectedAvatarFrame(frame)
+        _avatarFrame.value = frame
+    }
+
+    private val _unlockedNameGradientNames = MutableStateFlow(cosmeticsPrefs.getUnlockedNameGradientNames())
+    val unlockedNameGradientNames: StateFlow<Set<String>> = _unlockedNameGradientNames.asStateFlow()
+
+    private val _nameGradient = MutableStateFlow(cosmeticsPrefs.getSelectedNameGradient())
+    val nameGradient: StateFlow<NameGradient> = _nameGradient.asStateFlow()
+
+    fun isNameGradientUnlocked(gradient: NameGradient): Boolean =
+        gradient.berriesCost <= 0L || _unlockedNameGradientNames.value.contains(gradient.name)
+
+    /** Spends berries to unlock [gradient] and immediately applies it. False without spending if funds are short or it's already owned. */
+    fun purchaseNameGradient(gradient: NameGradient): Boolean {
+        if (isNameGradientUnlocked(gradient)) return false
+        if (gachaAvailableBerries.value < gradient.berriesCost) return false
+
+        gachaPrefs.addSpentBerries(gradient.berriesCost)
+        _gachaSpentBerries.value = gachaPrefs.getSpentBerries()
+
+        cosmeticsPrefs.unlockNameGradient(gradient)
+        _unlockedNameGradientNames.value = cosmeticsPrefs.getUnlockedNameGradientNames()
+
+        cosmeticsPrefs.setSelectedNameGradient(gradient)
+        _nameGradient.value = gradient
+        return true
+    }
+
+    /** Switches to an already-unlocked name gradient. No-ops if [gradient] hasn't been purchased. */
+    fun selectNameGradient(gradient: NameGradient) {
+        if (!isNameGradientUnlocked(gradient)) return
+        cosmeticsPrefs.setSelectedNameGradient(gradient)
+        _nameGradient.value = gradient
     }
 }
