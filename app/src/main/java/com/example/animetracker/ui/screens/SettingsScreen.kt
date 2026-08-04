@@ -108,6 +108,7 @@ import com.example.animetracker.BuildConfig
 import com.example.animetracker.data.MalXmlPort
 import com.example.animetracker.ui.components.ReiWordmark
 import com.example.animetracker.ui.model.AvatarFrame
+import com.example.animetracker.ui.model.AvatarGlowHalo
 import com.example.animetracker.ui.model.brush
 import com.example.animetracker.ui.model.GachaRarity
 import com.example.animetracker.ui.model.NameGradient
@@ -384,38 +385,41 @@ private fun ProfileHeaderCard(viewModel: AnimeViewModel) {
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .then(
-                        if (avatarFrame.glow) {
-                            Modifier.border(width = 3.dp, brush = frameBrush, shape = CircleShape)
-                        } else {
-                            Modifier.border(width = 2.dp, brush = frameBrush, shape = CircleShape)
-                        }
-                    )
-                    .padding(3.dp)
-                    .clip(CircleShape)
-                    .background(frameBrush),
-                contentAlignment = Alignment.Center
-            ) {
-                if (avatarPath != null) {
-                    AsyncImage(
-                        model = File(avatarPath!!),
-                        contentDescription = "Your avatar",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Filled.Person,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(28.dp)
-                    )
+            Box(contentAlignment = Alignment.Center) {
+                AvatarGlowHalo(frame = avatarFrame, avatarSize = 64.dp)
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .then(
+                            if (avatarFrame.glow) {
+                                Modifier.border(width = 3.dp, brush = frameBrush, shape = CircleShape)
+                            } else {
+                                Modifier.border(width = 2.dp, brush = frameBrush, shape = CircleShape)
+                            }
+                        )
+                        .padding(3.dp)
+                        .clip(CircleShape)
+                        .background(frameBrush),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (avatarPath != null) {
+                        AsyncImage(
+                            model = File(avatarPath!!),
+                            contentDescription = "Your avatar",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.Person,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
             }
 
@@ -894,11 +898,24 @@ private fun NavStyleShopCard(
                                     MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
                                 )
                             )
+                            NavBarStyle.FLOATING_DOTS -> Brush.linearGradient(
+                                listOf(Color.Transparent, Color.Transparent)
+                            )
+                            NavBarStyle.DOCK -> Brush.linearGradient(
+                                listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface)
+                            )
+                            NavBarStyle.UNDERLINE -> Brush.linearGradient(
+                                listOf(Color.Transparent, Color.Transparent)
+                            )
                         }
                     )
                     .border(
                         width = 1.dp,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = if (style == NavBarStyle.SOLID) 0.2f else 0.6f),
+                        color = if (style == NavBarStyle.FLOATING_DOTS || style == NavBarStyle.UNDERLINE) {
+                            Color.Transparent
+                        } else {
+                            MaterialTheme.colorScheme.primary.copy(alpha = if (style == NavBarStyle.SOLID) 0.2f else 0.6f)
+                        },
                         shape = RoundedCornerShape(10.dp)
                     )
             )
@@ -1001,19 +1018,22 @@ private fun AvatarFrameShopCard(
                 .fillMaxWidth()
                 .padding(14.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .border(
-                        width = if (frame.glow) 3.dp else 2.dp,
-                        brush = frame.brush(),
-                        shape = CircleShape
-                    )
-                    .padding(3.dp)
-                    .clip(CircleShape)
-                    .background(frame.brush())
-            )
+            Box(contentAlignment = Alignment.Center) {
+                AvatarGlowHalo(frame = frame, avatarSize = 36.dp)
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .border(
+                            width = if (frame.glow) 3.dp else 2.dp,
+                            brush = frame.brush(),
+                            shape = CircleShape
+                        )
+                        .padding(3.dp)
+                        .clip(CircleShape)
+                        .background(frame.brush())
+                )
+            }
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = frame.displayName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
