@@ -24,6 +24,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -65,8 +66,9 @@ class MainActivity : ComponentActivity() {
         handleAniListRedirectIfPresent(intent)
         setContent {
             val themeOption by viewModel.themeOption.collectAsState()
+            val trueBlackBackground by viewModel.trueBlackBackground.collectAsState()
 
-            AnimeTrackerTheme(themeOption) {
+            AnimeTrackerTheme(themeOption, trueBlackBackground) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -135,12 +137,19 @@ private fun MainAppContent(viewModel: AnimeViewModel) {
         navController.popBackStack(Destination.HOME.route, false)
     }
 
+    val navBarStyle by viewModel.navBarStyle.collectAsState()
+
+    // Read once at launch — NavHost's startDestination is only consulted
+    // the first time the graph is built, so this doesn't need to be
+    // reactive to later Settings changes within the same session.
+    val defaultStartRoute = remember { viewModel.defaultStartRoute.value }
+
     Scaffold(
-        bottomBar = { BottomNavBar(navController = navController) }
+        bottomBar = { BottomNavBar(navController = navController, navBarStyle = navBarStyle) }
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = Destination.HOME.route,
+            startDestination = defaultStartRoute,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
