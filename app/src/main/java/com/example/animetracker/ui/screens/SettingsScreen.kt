@@ -812,8 +812,20 @@ private fun GradientSwatchRow(
                         .size(48.dp)
                         .clip(CircleShape)
                         .background(
-                            if (isClassic) MaterialTheme.colorScheme.surface
-                            else Brush.linearGradient(gradient.colors)
+                            // Both branches must resolve to the same type —
+                            // mixing a bare Color with a Brush here made the
+                            // whole expression infer as `Any`, which matches
+                            // neither of Modifier.background's overloads and
+                            // fails the build. Wrapping the classic swatch's
+                            // flat color as a same-color Brush keeps both
+                            // branches typed as Brush.
+                            if (isClassic) {
+                                Brush.linearGradient(
+                                    listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface)
+                                )
+                            } else {
+                                Brush.linearGradient(gradient.colors)
+                            }
                         )
                         .border(
                             width = if (isSelected) 3.dp else 1.dp,
@@ -2457,27 +2469,4 @@ private fun SettingsSwitchRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp)
             )
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = {
-                if (hapticsEnabled) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                onCheckedChange(it)
-            },
-            colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
-        )
-    }
-}
-
-/** A row of mutually-exclusive filter chips for small enum-style choices
- *  (background style, default start tab, etc.) — lighter weight than a
- *  full picker dialog for a 2-3 option pick. */
-@Composable
-private fun <T> SettingsChoicePicker(
-    options: List<Pair<String, T>>,
-    selected: T,
-    onSelected: (T) -> Unit
-) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-     
+  
