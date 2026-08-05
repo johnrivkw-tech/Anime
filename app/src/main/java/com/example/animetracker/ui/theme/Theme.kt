@@ -3,6 +3,7 @@ package com.example.animetracker.ui.theme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.font.FontFamily
 
 @Composable
 fun AnimeTrackerTheme(
@@ -11,6 +12,10 @@ fun AnimeTrackerTheme(
     // default; Midnight swaps in a soft near-black (Void) with a cool
     // undertone for a bit more depth behind cards in low light.
     trueBlackBackground: Boolean = true,
+    // Applies across all five main tabs (Home, Schedule, My List, Search,
+    // Settings) via MaterialTheme.typography — every Text() that reads its
+    // style from the theme picks this up automatically.
+    fontOption: AppFontOption = AppFontOption.Default,
     content: @Composable () -> Unit
 ) {
     val background = if (trueBlackBackground) themeOption.background else Void
@@ -40,7 +45,7 @@ fun AnimeTrackerTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = appTypography(fontOption.fontFamily ?: FontFamily.Default),
         content = content
     )
 }
