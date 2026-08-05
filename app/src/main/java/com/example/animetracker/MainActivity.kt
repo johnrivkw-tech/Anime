@@ -67,8 +67,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeOption by viewModel.themeOption.collectAsState()
             val trueBlackBackground by viewModel.trueBlackBackground.collectAsState()
+            val appFont by viewModel.appFont.collectAsState()
 
-            AnimeTrackerTheme(themeOption, trueBlackBackground) {
+            AnimeTrackerTheme(themeOption, trueBlackBackground, appFont) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
