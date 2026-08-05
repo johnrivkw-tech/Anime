@@ -18,6 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -29,6 +30,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -52,13 +54,13 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.SpaceDashboard
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.filled.ViewQuilt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -91,17 +93,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.animetracker.BuildConfig
@@ -117,6 +125,7 @@ import com.example.animetracker.ui.model.textStyle
 import com.example.animetracker.ui.navigation.Destination
 import com.example.animetracker.ui.navigation.NavBarStyle
 import com.example.animetracker.ui.model.currentRank
+import com.example.animetracker.ui.theme.AppFontOption
 import com.example.animetracker.ui.theme.AppThemeOption
 import com.example.animetracker.viewmodel.AnimeViewModel
 import java.io.File
@@ -132,11 +141,11 @@ private enum class SettingsSection(
     val icon: ImageVector
 ) {
     APPEARANCE("Appearance", "Theme, accent color, and background", Icons.Filled.Palette),
-    HOME_LAYOUT("Home Layout", "Choose which rows show on Home", Icons.Filled.SpaceDashboard),
+    HOME_LAYOUT("Home Layout", "Choose which rows show on Home", Icons.Filled.ViewQuilt),
     BERRIES_SHOP("Berries Shop", "Spend berries on exclusive cosmetics", Icons.Filled.Storefront),
     CONTENT_FILTERS("Content Filters", "Age and mature content", Icons.Filled.Shield),
     NOTIFICATIONS("Notifications", "Reminders and alerts", Icons.Filled.NotificationsActive),
-    BEHAVIOR("Playback & Behavior", "Motion, haptics, data usage", Icons.Filled.Tune),
+    BEHAVIOR("Playback & Behavior", "Motion, haptics, data usage", Icons.Filled.Vibration),
     AI_PERSONALITY("AI Personality", "Customize how the AI talks to you", Icons.Filled.SmartToy),
     MANGA("Manga", "Show AniList manga in search", Icons.Filled.AutoStories),
     ANILIST_SYNC("AniList Sync", "Log in and sync your list", Icons.Filled.Sync),
@@ -150,6 +159,7 @@ fun SettingsScreen(viewModel: AnimeViewModel) {
     // null = showing the main settings menu list; otherwise the open section.
     var activeSection by rememberSaveable { mutableStateOf<SettingsSection?>(null) }
     val reduceMotion by viewModel.reduceMotion.collectAsState()
+    val titleGradient by viewModel.titleGradient.collectAsState()
 
     Scaffold(
         // This Scaffold is nested inside the app-level one in MainActivity,
@@ -161,7 +171,17 @@ fun SettingsScreen(viewModel: AnimeViewModel) {
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
-                title = { Text(activeSection?.title ?: "Settings", fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        text = activeSection?.title ?: "Settings",
+                        style = titleGradient.textStyle(
+                            MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                    )
+                },
                 navigationIcon = {
                     if (activeSection != null) {
                         IconButton(onClick = { activeSection = null }) {
@@ -225,20 +245,39 @@ private fun SettingsMenuList(viewModel: AnimeViewModel, onSectionSelected: (Sett
         // backdrop — this is what was making the whole screen read as
         // "plain": every card sat on identical solid black with nothing
         // to anchor the eye at the top.
-        Box(
+        //
+        // The radius used to be a hardcoded 900px, which doesn't scale with
+        // screen size/density: on most phones that's smaller than the box's
+        // diagonal, so the gradient never actually reached "Transparent"
+        // before hitting the box edge — it just read as a flat translucent
+        // rectangle with a hard seam at the bottom instead of a soft glow.
+        // Sizing the radius off the box's own measured width (via
+        // BoxWithConstraints) and anchoring it at the top-center fixes that:
+        // it now fades out smoothly well before the bottom edge on any
+        // screen size.
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(280.dp)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
-                            Color.Transparent
-                        ),
-                        radius = 900f
+        ) {
+            val density = LocalDensity.current
+            val widthPx = with(density) { maxWidth.toPx() }
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
+                                Color.Transparent
+                            ),
+                            center = Offset(widthPx / 2f, 0f),
+                            radius = widthPx * 0.85f
+                        )
                     )
-                )
-        )
+            )
+        }
 
         Column(
             modifier = Modifier
@@ -329,12 +368,22 @@ private fun SettingsGroupCard(
     ) {
         Column {
             sections.forEachIndexed { index, section ->
+                // Blend smoothly from primary to secondary across the group
+                // instead of hard-alternating between only two flat colors —
+                // with 3+ rows the old version just repeated the same two
+                // tints, so half the icons in a group were indistinguishable.
+                // A per-row lerp gives every icon its own point on the
+                // gradient while still only using the theme's two accent
+                // colors, so it stays on-brand for every theme.
+                val fraction = if (sections.size > 1) index.toFloat() / (sections.size - 1) else 0f
+                val accent = lerp(
+                    MaterialTheme.colorScheme.primary,
+                    MaterialTheme.colorScheme.secondary,
+                    fraction
+                )
                 SettingsMenuRow(
                     section = section,
-                    // Alternating primary/secondary icon badges instead of
-                    // one flat color for every row — a small touch, but it's
-                    // what makes the list feel designed instead of generated.
-                    accent = if (index % 2 == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                    accent = accent,
                     onClick = { onSectionSelected(section) }
                 )
                 if (index != sections.lastIndex) {
@@ -486,14 +535,29 @@ private fun SettingsMenuRow(section: SettingsSection, accent: Color, onClick: ()
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(accent.copy(alpha = 0.15f)),
+                // A subtle diagonal gradient plus a hairline ring reads as
+                // an actual icon "chip" instead of a flat tinted square —
+                // the same trick used on the profile card border above.
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            accent.copy(alpha = 0.22f),
+                            accent.copy(alpha = 0.08f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    color = accent.copy(alpha = 0.35f),
+                    shape = RoundedCornerShape(12.dp)
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = section.icon,
                 contentDescription = null,
                 tint = accent,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(21.dp)
             )
         }
         Column(
@@ -524,56 +588,366 @@ private fun SettingsMenuRow(section: SettingsSection, accent: Color, onClick: ()
 private fun AppearanceTab(viewModel: AnimeViewModel) {
     val selectedTheme by viewModel.themeOption.collectAsState()
     val unlockedThemeNames by viewModel.unlockedThemeNames.collectAsState()
-    val lockedCount = AppThemeOption.entries.count { it.berriesCost > 0 && !unlockedThemeNames.contains(it.name) }
-    val visibleThemes = AppThemeOption.entries.filter { it.berriesCost <= 0 || unlockedThemeNames.contains(it.name) }
-
-    Text(
-        text = "Theme",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold
-    )
-    Text(
-        text = "Pick an accent that fits your vibe. Changes apply instantly across the app.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
-    )
-
-    ThemeGrid(
-        themes = visibleThemes,
-        selectedTheme = selectedTheme,
-        onThemeSelected = { viewModel.setTheme(it) }
-    )
-
-    if (lockedCount > 0) {
-        Text(
-            text = "$lockedCount more exclusive ${if (lockedCount == 1) "theme" else "themes"} in the Berries Shop",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(top = 12.dp)
-        )
-    }
-
-    Spacer(modifier = Modifier.height(28.dp))
-
     val trueBlack by viewModel.trueBlackBackground.collectAsState()
+    val appFont by viewModel.appFont.collectAsState()
+    val titleGradient by viewModel.titleGradient.collectAsState()
+    val nameGradient by viewModel.nameGradient.collectAsState()
+    val unlockedNameGradientNames by viewModel.unlockedNameGradientNames.collectAsState()
+    val navBarStyle by viewModel.navBarStyle.collectAsState()
+    val unlockedNavStyleNames by viewModel.unlockedNavStyleNames.collectAsState()
+    val avatarFrame by viewModel.avatarFrame.collectAsState()
+    val unlockedAvatarFrameNames by viewModel.unlockedAvatarFrameNames.collectAsState()
 
-    Text(
-        text = "Background",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold
-    )
-    Text(
-        text = "True Black saves battery on OLED screens. Midnight adds a bit of depth behind cards.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
-    )
-    SettingsChoicePicker(
-        options = listOf("True Black" to true, "Midnight" to false),
-        selected = trueBlack,
-        onSelected = { viewModel.setTrueBlackBackground(it) }
-    )
+    val visibleThemes = AppThemeOption.entries.filter { it.berriesCost <= 0 || unlockedThemeNames.contains(it.name) }
+    val lockedThemeCount = AppThemeOption.entries.size - visibleThemes.size
+
+    val ownedGradients = NameGradient.entries.filter { it.berriesCost <= 0 || unlockedNameGradientNames.contains(it.name) }
+    val lockedGradientCount = NameGradient.entries.size - ownedGradients.size
+
+    val ownedNavStyles = NavBarStyle.entries.filter { it.berriesCost <= 0 || unlockedNavStyleNames.contains(it.name) }
+    val lockedNavStyleCount = NavBarStyle.entries.size - ownedNavStyles.size
+
+    val ownedFrames = AvatarFrame.entries.filter { it.berriesCost <= 0 || unlockedAvatarFrameNames.contains(it.name) }
+    val lockedFrameCount = AvatarFrame.entries.size - ownedFrames.size
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        AppearanceSection(
+            title = "Theme",
+            subtitle = "Pick an accent that fits your vibe. Changes apply instantly across the app.",
+            lockedHint = shopHint(lockedThemeCount, "theme")
+        ) {
+            ThemeGrid(
+                themes = visibleThemes,
+                selectedTheme = selectedTheme,
+                onThemeSelected = { viewModel.setTheme(it) }
+            )
+        }
+
+        AppearanceSection(
+            title = "Font",
+            subtitle = "Changes the typeface across Home, Schedule, My List, Search, and Settings."
+        ) {
+            FontPickerRow(selected = appFont, onSelected = { viewModel.setAppFont(it) })
+        }
+
+        AppearanceSection(
+            title = "Background",
+            subtitle = "True Black saves battery on OLED screens. Midnight adds a bit of depth behind cards."
+        ) {
+            SettingsChoicePicker(
+                options = listOf("True Black" to true, "Midnight" to false),
+                selected = trueBlack,
+                onSelected = { viewModel.setTrueBlackBackground(it) }
+            )
+        }
+
+        AppearanceSection(
+            title = "Screen Title Color",
+            subtitle = "Recolor each tab's big header using any Name Gradient you own.",
+            lockedHint = shopHint(lockedGradientCount, "gradient")
+        ) {
+            GradientSwatchRow(
+                gradients = ownedGradients,
+                selected = titleGradient,
+                onSelected = { viewModel.selectTitleGradient(it) }
+            )
+        }
+
+        AppearanceSection(
+            title = "Name Gradient",
+            subtitle = "Recolor your display name wherever it's shown.",
+            lockedHint = shopHint(lockedGradientCount, "gradient")
+        ) {
+            GradientSwatchRow(
+                gradients = ownedGradients,
+                selected = nameGradient,
+                onSelected = { viewModel.selectNameGradient(it) }
+            )
+        }
+
+        AppearanceSection(
+            title = "Nav Bar Style",
+            subtitle = "Change the look of the bar at the bottom of the screen.",
+            lockedHint = shopHint(lockedNavStyleCount, "style")
+        ) {
+            NavStyleSelectorRow(
+                styles = ownedNavStyles,
+                selected = navBarStyle,
+                onSelected = { viewModel.selectNavBarStyle(it) }
+            )
+        }
+
+        AppearanceSection(
+            title = "Avatar Frame",
+            subtitle = "A decorative ring around your profile photo.",
+            lockedHint = shopHint(lockedFrameCount, "frame")
+        ) {
+            AvatarFrameSelectorRow(
+                frames = ownedFrames,
+                selected = avatarFrame,
+                onSelected = { viewModel.selectAvatarFrame(it) }
+            )
+        }
+    }
+}
+
+/** "3 more exclusive themes in the Berries Shop" — same phrasing used for every locked-item hint across Appearance. */
+private fun shopHint(lockedCount: Int, noun: String): String? {
+    if (lockedCount <= 0) return null
+    val plural = if (lockedCount == 1) noun else "${noun}s"
+    return "$lockedCount more exclusive $plural in the Berries Shop"
+}
+
+/**
+ * Every Appearance row — Theme, Font, Background, the two gradient
+ * pickers, Nav Bar Style, Avatar Frame — shares this same card shell so
+ * the tab reads as one coherent set of controls instead of loose text and
+ * widgets stacked on the bare background.
+ */
+@Composable
+private fun AppearanceSection(
+    title: String,
+    subtitle: String,
+    lockedHint: String? = null,
+    content: @Composable () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(20.dp)
+            )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+            )
+            content()
+            if (lockedHint != null) {
+                Text(
+                    text = lockedHint,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 12.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FontPickerRow(selected: AppFontOption, onSelected: (AppFontOption) -> Unit) {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        AppFontOption.entries.forEach { font ->
+            val isSelected = font == selected
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .widthIn(min = 78.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                        else MaterialTheme.colorScheme.surface
+                    )
+                    .border(
+                        width = if (isSelected) 1.5.dp else 1.dp,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(14.dp)
+                    )
+                    .clickable { onSelected(font) }
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
+            ) {
+                Text(
+                    text = "Aa",
+                    fontFamily = font.fontFamily ?: FontFamily.Default,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = font.displayName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+/** Shared by the "Screen Title Color" and "Name Gradient" sections — both are just a second slot for the same owned [NameGradient] set. */
+@Composable
+private fun GradientSwatchRow(
+    gradients: List<NameGradient>,
+    selected: NameGradient,
+    onSelected: (NameGradient) -> Unit
+) {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        gradients.forEach { gradient ->
+            val isSelected = gradient == selected
+            val isClassic = gradient.colors.isEmpty()
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(64.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isClassic) MaterialTheme.colorScheme.surface
+                            else Brush.linearGradient(gradient.colors)
+                        )
+                        .border(
+                            width = if (isSelected) 3.dp else 1.dp,
+                            color = if (isSelected) MaterialTheme.colorScheme.onBackground
+                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            shape = CircleShape
+                        )
+                        .clickable { onSelected(gradient) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    when {
+                        isSelected -> Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = "Selected",
+                            tint = if (isClassic) MaterialTheme.colorScheme.onSurface else Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        isClassic -> Text(
+                            text = "Aa",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Text(
+                    text = gradient.displayName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NavStyleSelectorRow(
+    styles: List<NavBarStyle>,
+    selected: NavBarStyle,
+    onSelected: (NavBarStyle) -> Unit
+) {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        styles.forEach { style ->
+            val isSelected = style == selected
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .width(100.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                        else MaterialTheme.colorScheme.surface
+                    )
+                    .border(
+                        width = if (isSelected) 1.5.dp else 1.dp,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(14.dp)
+                    )
+                    .clickable { onSelected(style) }
+                    .padding(horizontal = 12.dp, vertical = 12.dp)
+            ) {
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = "Selected",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+                Text(
+                    text = style.displayName,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AvatarFrameSelectorRow(
+    frames: List<AvatarFrame>,
+    selected: AvatarFrame,
+    onSelected: (AvatarFrame) -> Unit
+) {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        frames.forEach { frame ->
+            val isSelected = frame == selected
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .border(width = 3.dp, brush = frame.brush(), shape = CircleShape)
+                        .padding(4.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .clickable { onSelected(frame) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isSelected) {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = "Selected",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+                Text(
+                    text = frame.displayName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -907,14 +1281,56 @@ private fun NavStyleShopCard(
                             NavBarStyle.UNDERLINE -> Brush.linearGradient(
                                 listOf(Color.Transparent, Color.Transparent)
                             )
+                            NavBarStyle.OUTLINE -> Brush.linearGradient(
+                                listOf(Color.Transparent, Color.Transparent)
+                            )
+                            NavBarStyle.SEGMENTED -> Brush.linearGradient(
+                                listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface)
+                            )
+                            NavBarStyle.NOTCH -> Brush.radialGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                    MaterialTheme.colorScheme.surface
+                                )
+                            )
+                            NavBarStyle.BUBBLE_POP -> Brush.linearGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                                    MaterialTheme.colorScheme.surface
+                                )
+                            )
+                            NavBarStyle.ISLANDS -> Brush.linearGradient(
+                                listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface)
+                            )
+                            // Mythic previews get a real gradient sweep instead of a
+                            // flat swatch, so they read as noticeably fancier even
+                            // before you tap in to see the animated version.
+                            NavBarStyle.AURORA_DRIFT -> Brush.horizontalGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
+                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.75f),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
+                                )
+                            )
+                            NavBarStyle.VOID_RIFT -> Brush.radialGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f),
+                                    Color(0xFF0A0912)
+                                )
+                            )
                         }
                     )
                     .border(
                         width = 1.dp,
-                        color = if (style == NavBarStyle.FLOATING_DOTS || style == NavBarStyle.UNDERLINE) {
-                            Color.Transparent
-                        } else {
-                            MaterialTheme.colorScheme.primary.copy(alpha = if (style == NavBarStyle.SOLID) 0.2f else 0.6f)
+                        color = when (style) {
+                            NavBarStyle.FLOATING_DOTS, NavBarStyle.UNDERLINE, NavBarStyle.OUTLINE ->
+                                Color.Transparent
+                            NavBarStyle.SOLID ->
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            NavBarStyle.AURORA_DRIFT, NavBarStyle.VOID_RIFT ->
+                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
+                            else ->
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                         },
                         shape = RoundedCornerShape(10.dp)
                     )
@@ -2064,180 +2480,4 @@ private fun <T> SettingsChoicePicker(
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        options.forEach { (label, value) ->
-            val isSelected = value == selected
-            FilterChip(
-                selected = isSelected,
-                onClick = { onSelected(value) },
-                label = { Text(label) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
-                    selectedLabelColor = MaterialTheme.colorScheme.primary
-                ),
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun ThemeGrid(
-    themes: List<AppThemeOption>,
-    selectedTheme: AppThemeOption,
-    onThemeSelected: (AppThemeOption) -> Unit
-) {
-    val columns = 3
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        themes.chunked(columns).forEach { row ->
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                row.forEach { theme ->
-                    Box(modifier = Modifier.weight(1f)) {
-                        ThemeSwatch(
-                            theme = theme,
-                            isSelected = theme == selectedTheme,
-                            onClick = { onThemeSelected(theme) }
-                        )
-                    }
-                }
-                repeat(columns - row.size) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ThemeSwatch(theme: AppThemeOption, isSelected: Boolean, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(20.dp))
-                .background(Brush.linearGradient(listOf(theme.primary, theme.secondary)))
-                .border(
-                    width = if (isSelected) 3.dp else 0.dp,
-                    color = if (isSelected) MaterialTheme.colorScheme.onBackground else Color.Transparent,
-                    shape = RoundedCornerShape(20.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isSelected) {
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .background(theme.background.copy(alpha = 0.85f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Filled.Check, contentDescription = "Selected", tint = theme.primary)
-                }
-            }
-        }
-        Text(
-            text = theme.displayName,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(top = 6.dp)
-        )
-    }
-}
-
-@Composable
-private fun ContentFiltersSection(
-    userAge: Int?,
-    matureContentEnabled: Boolean,
-    onAgeCommitted: (Int?) -> Unit,
-    onMatureContentToggled: (Boolean) -> Unit
-) {
-    val focusManager = LocalFocusManager.current
-    var ageText by remember { mutableStateOf(userAge?.toString() ?: "") }
-
-    fun commitAge() {
-        val parsed = ageText.toIntOrNull()?.coerceIn(0, 120)
-        ageText = parsed?.toString() ?: ""
-        onAgeCommitted(parsed)
-    }
-
-    val isAdult = (ageText.toIntOrNull() ?: 0) >= 18
-
-    Column {
-        OutlinedTextField(
-            value = ageText,
-            onValueChange = { input ->
-                if (input.length <= 3 && input.all { it.isDigit() }) ageText = input
-            },
-            label = { Text("Your age") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = {
-                commitAge()
-                focusManager.clearFocus()
-            }),
-            modifier = Modifier
-                .fillMaxWidth()
-                .onFocusChanged { focusState -> if (!focusState.isFocused) commitAge() }
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "Mature Content (18+)",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        if (!isAdult) {
-                            Icon(
-                                imageVector = Icons.Filled.Lock,
-                                contentDescription = "Locked",
-                                modifier = Modifier
-                                    .padding(start = 6.dp)
-                                    .size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    Text(
-                        text = when {
-                            ageText.isBlank() -> "Enter your age above to manage this setting."
-                            !isAdult -> "You must be 18 or older to view mature content."
-                            matureContentEnabled -> "Mature titles are included across the app."
-                            else -> "Mature titles are hidden across the app."
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                }
-                Switch(
-                    checked = matureContentEnabled && isAdult,
-                    onCheckedChange = onMatureContentToggled,
-                    enabled = isAdult,
-                    colors = SwitchDefaults.colors(
-                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                    )
-                )
-            }
-        }
-    }
-}
+     
