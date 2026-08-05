@@ -1,5 +1,6 @@
 package com.example.animetracker.ui.components
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -67,6 +68,10 @@ fun <T> AdaptiveAnimeGrid(
     posterAspectRatio: Float = 2f / 3f,
     /** Space each card takes up *below* the poster image — title, subtitle/progress row, etc. Both existing poster cards land around this same figure; pass a different value if a future card's text block is meaningfully taller or shorter. */
     cardExtraContentHeight: Dp = 64.dp,
+    /** Exposes the grid's internal scroll state so a caller can watch it (e.g. to trigger loading more items as the user nears the bottom) without the grid needing to know anything about pagination itself. */
+    scrollState: ScrollState? = null,
+    /** Optional content rendered below the last row, inside the same scrolling column — a "Load more" row or a loading spinner, for example. */
+    footer: (@Composable () -> Unit)? = null,
     itemContent: @Composable (T) -> Unit
 ) {
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.TopCenter) {
@@ -89,7 +94,7 @@ fun <T> AdaptiveAnimeGrid(
 
         Column(
             modifier = Modifier
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState ?: rememberScrollState())
                 .padding(contentPadding),
             verticalArrangement = Arrangement.spacedBy(verticalSpacing)
         ) {
@@ -108,6 +113,9 @@ fun <T> AdaptiveAnimeGrid(
                         Spacer(modifier = Modifier.weight(1f))
                     }
                 }
+            }
+            if (footer != null) {
+                footer()
             }
         }
     }
