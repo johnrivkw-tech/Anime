@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.animetracker.data.network.AniListAiringSchedule
 import com.example.animetracker.ui.components.FallbackNotice
+import com.example.animetracker.ui.model.textStyle
 import com.example.animetracker.ui.theme.Bone
 import com.example.animetracker.ui.theme.ErrorRed
 import com.example.animetracker.ui.theme.Smoke
@@ -71,6 +72,7 @@ fun ScheduleScreen(
     val error by viewModel.scheduleError.collectAsState()
     val localByAniListId by viewModel.localByAniListId.collectAsState()
     val usingFallback by viewModel.scheduleUsingFallback.collectAsState()
+    val titleGradient by viewModel.titleGradient.collectAsState()
 
     // 2 days back through 4 days ahead, centered on today.
     val days = remember { (-2..4).map { LocalDate.now().plusDays(it.toLong()) } }
@@ -89,9 +91,12 @@ fun ScheduleScreen(
         ) {
             Text(
                 text = "Schedule",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Black,
-                color = Bone
+                style = titleGradient.textStyle(
+                    MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Black,
+                        color = Bone
+                    )
+                )
             )
             IconButton(onClick = onSearchClick) {
                 Icon(Icons.Filled.Search, contentDescription = "Search", tint = Bone)
