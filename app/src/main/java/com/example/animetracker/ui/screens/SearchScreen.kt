@@ -87,6 +87,7 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
     // immediately (list rebuilds, selection included) if the user turns
     // either one off.
     val matureContentEnabled by viewModel.matureContentEnabled.collectAsState()
+    val titleGradient by viewModel.titleGradient.collectAsState()
     val searchGenres = remember(matureContentEnabled) {
         if (matureContentEnabled) ANILIST_GENRES + ANILIST_HENTAI_GENRE else ANILIST_GENRES
     }
