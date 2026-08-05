@@ -32,6 +32,7 @@ import com.example.animetracker.ui.model.AvatarFrame
 import com.example.animetracker.ui.model.Faction
 import com.example.animetracker.ui.model.NameGradient
 import com.example.animetracker.ui.navigation.NavBarStyle
+import com.example.animetracker.ui.theme.AppFontOption
 import com.example.animetracker.ui.theme.AppThemeOption
 import com.example.animetracker.data.network.AniListAiringSchedule
 import com.example.animetracker.data.network.AniListCharacterEdge
@@ -114,6 +115,14 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _themeOption = MutableStateFlow(themePrefs.getTheme())
     val themeOption: StateFlow<AppThemeOption> = _themeOption.asStateFlow()
+
+    private val _appFont = MutableStateFlow(themePrefs.getFont())
+    val appFont: StateFlow<AppFontOption> = _appFont.asStateFlow()
+
+    fun setAppFont(font: AppFontOption) {
+        themePrefs.setFont(font)
+        _appFont.value = font
+    }
 
     private val _aiPersonality = MutableStateFlow(personalityPrefs.getPersonality())
     val aiPersonality: StateFlow<String> = _aiPersonality.asStateFlow()
@@ -2167,5 +2176,18 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         if (!isNameGradientUnlocked(gradient)) return
         cosmeticsPrefs.setSelectedNameGradient(gradient)
         _nameGradient.value = gradient
+    }
+
+    // A second, independent slot for the same set of owned name gradients —
+    // applied to each screen's big title text instead of the display name.
+    // Reuses [isNameGradientUnlocked] so anything already purchased for the
+    // name is immediately available here too, with nothing extra to buy.
+    private val _titleGradient = MutableStateFlow(cosmeticsPrefs.getSelectedTitleGradient())
+    val titleGradient: StateFlow<NameGradient> = _titleGradient.asStateFlow()
+
+    fun selectTitleGradient(gradient: NameGradient) {
+        if (!isNameGradientUnlocked(gradient)) return
+        cosmeticsPrefs.setSelectedTitleGradient(gradient)
+        _titleGradient.value = gradient
     }
 }
