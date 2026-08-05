@@ -55,6 +55,7 @@ import com.example.animetracker.ui.components.AdaptiveAnimeGrid
 import com.example.animetracker.ui.components.FallbackNotice
 import com.example.animetracker.ui.components.AnimeGridCard
 import com.example.animetracker.ui.model.toHomeCardItem
+import com.example.animetracker.ui.model.textStyle
 import com.example.animetracker.ui.theme.Bone
 import com.example.animetracker.ui.theme.ErrorRed
 import com.example.animetracker.ui.theme.Smoke
@@ -134,9 +135,12 @@ fun SearchScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit) {
             ) {
                 Text(
                     text = "Search",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Black,
-                    color = Bone
+                    style = titleGradient.textStyle(
+                        MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Black,
+                            color = Bone
+                        )
+                    )
                 )
             }
 
