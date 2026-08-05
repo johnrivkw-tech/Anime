@@ -9,6 +9,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -35,6 +36,7 @@ import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -71,9 +73,16 @@ import coil.compose.AsyncImage
 import com.example.animetracker.data.Anime
 import com.example.animetracker.data.AnimeStatus
 import com.example.animetracker.ui.components.AdaptiveAnimeGrid
+import com.example.animetracker.ui.model.textStyle
 import com.example.animetracker.ui.theme.Bone
 import com.example.animetracker.ui.theme.Smoke
 import com.example.animetracker.viewmodel.AnimeViewModel
+
+/** How many My List items are shown per page — grows by this amount each time the user scrolls near the bottom. */
+private const val MY_LIST_PAGE_SIZE = 20
+
+/** How close (in px) to the bottom of the scrollable content before the next page loads. */
+private const val LOAD_MORE_THRESHOLD_PX = 600
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,6 +91,7 @@ fun HomeScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}) {
     val allAnime by viewModel.allLocalAnime.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val statusFilter by viewModel.statusFilter.collectAsState()
+    val titleGradient by viewModel.titleGradient.collectAsState()
 
     var showDialog by remember { mutableStateOf(false) }
     var animeBeingEdited by remember { mutableStateOf<Anime?>(null) }
@@ -93,6 +103,26 @@ fun HomeScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}) {
     LaunchedEffect(searchExpanded) {
         if (searchExpanded) {
             searchFocusRequester.requestFocus()
+        }
+    }
+
+    // My List was building every poster's row at once, so a 100+ title
+    // collection composed and kicked off image loads for the entire list
+    // the moment the screen opened. Loading a page of PAGE_SIZE at a time —
+    // and growing that page as the user scrolls near the bottom — keeps the
+    // initial load light regardless of collection size. The page resets
+    // whenever the search text or status filter changes, since those swap
+    // out which underlying list is being paged through.
+    var visibleCount by remember(searchQuery, statusFilter) { mutableStateOf(MY_LIST_PAGE_SIZE) }
+    val pagedAnimeList = remember(animeList, visibleCount) { animeList.take(visibleCount) }
+    val hasMoreToLoad = visibleCount < animeList.size
+    val listScrollState = rememberScrollState()
+
+    LaunchedEffect(listScrollState.value, listScrollState.maxValue, hasMoreToLoad) {
+        if (hasMoreToLoad && listScrollState.maxValue > 0 &&
+            listScrollState.value >= listScrollState.maxValue - LOAD_MORE_THRESHOLD_PX
+        ) {
+            visibleCount = (visibleCount + MY_LIST_PAGE_SIZE).coerceAtMost(animeList.size)
         }
     }
 
@@ -128,9 +158,12 @@ fun HomeScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "My List",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Black,
-                        color = Bone
+                        style = titleGradient.textStyle(
+                            MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Black,
+                                color = Bone
+                            )
+                        )
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
@@ -283,14 +316,31 @@ fun HomeScreen(viewModel: AnimeViewModel, onAnimeClick: (Int) -> Unit = {}) {
                     }
                 } else {
                     AdaptiveAnimeGrid(
-                        items = animeList,
+                        items = pagedAnimeList,
                         key = { it.id },
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = availableHeight),
                         contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 20.dp),
                         horizontalSpacing = 10.dp,
-                        verticalSpacing = 18.dp
+                        verticalSpacing = 18.dp,
+                        scrollState = listScrollState,
+                        footer = if (hasMoreToLoad) {
+                            {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 20.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        strokeWidth = 2.dp
+                                    )
+                                }
+                            }
+                        } else null
                     ) { anime ->
                         MyListPosterCard(
                             anime = anime,
