@@ -81,6 +81,20 @@ class CosmeticsPrefs(context: Context) {
         prefs.edit().putString(KEY_SELECTED_NAME_GRADIENT, gradient.name).apply()
     }
 
+    // The same owned gradients used for the display name can also be
+    // applied to each screen's big title text (the "My List" / "Settings"
+    // / etc. headers) — a separate slot so the two don't have to match,
+    // but drawing from the same purchased set rather than a whole second
+    // shop's worth of options.
+    fun getSelectedTitleGradient(): NameGradient {
+        val saved = prefs.getString(KEY_SELECTED_TITLE_GRADIENT, null) ?: return NameGradient.Classic
+        return NameGradient.entries.find { it.name == saved } ?: NameGradient.Classic
+    }
+
+    fun setSelectedTitleGradient(gradient: NameGradient) {
+        prefs.edit().putString(KEY_SELECTED_TITLE_GRADIENT, gradient.name).apply()
+    }
+
     companion object {
         private const val KEY_UNLOCKED_THEMES = "cosmetics_unlocked_themes"
         private const val KEY_UNLOCKED_NAV_STYLES = "cosmetics_unlocked_nav_styles"
@@ -89,5 +103,6 @@ class CosmeticsPrefs(context: Context) {
         private const val KEY_SELECTED_AVATAR_FRAME = "cosmetics_selected_avatar_frame"
         private const val KEY_UNLOCKED_NAME_GRADIENTS = "cosmetics_unlocked_name_gradients"
         private const val KEY_SELECTED_NAME_GRADIENT = "cosmetics_selected_name_gradient"
+        private const val KEY_SELECTED_TITLE_GRADIENT = "cosmetics_selected_title_gradient"
     }
 }
