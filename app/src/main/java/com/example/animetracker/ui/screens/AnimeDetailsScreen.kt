@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -309,8 +308,9 @@ private fun DetailsContent(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (details.score != null) {
-                        ScorePill(score = details.score)
+                    val score = details.score
+                    if (score != null) {
+                        ScorePill(score = score)
                         Spacer(modifier = Modifier.width(10.dp))
                     }
                     Text(
@@ -390,7 +390,10 @@ private fun DetailsContent(
                             text = "Episodes",
                             style = MaterialTheme.typography.titleMedium,
                             color = Bone,
-                      illed.ExpandLess else Icons.Filled.ExpandMore,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            imageVector = if (episodesExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
                             contentDescription = if (episodesExpanded) "Collapse episodes" else "Expand episodes",
                             tint = Smoke
                         )
@@ -908,13 +911,6 @@ private fun CharacterCard(entry: AniListCharacterEdge) {
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.secondary,
-                textAlign = TextAlign.Center,
-                maxLines = 1
-            )
-        }
-    }
-}
-            color = MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center,
                 maxLines = 1
             )
