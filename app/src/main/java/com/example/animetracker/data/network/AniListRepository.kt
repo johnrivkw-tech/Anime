@@ -109,11 +109,20 @@ private const val RELATIONS_FIELDS = """
     }
 """
 
+// Popularity/favourites are only needed on the Details screen, so they're
+// kept out of MEDIA_FIELDS (which the list/search/discover queries also
+// use) to avoid bloating every other query's payload.
+private const val STATS_FIELDS = """
+    popularity
+    favourites
+"""
+
 private val DETAILS_QUERY = """
     query(${'$'}id: Int) {
       Media(id: ${'$'}id, type: ANIME) {
         $MEDIA_FIELDS
         $RELATIONS_FIELDS
+        $STATS_FIELDS
       }
     }
 """.trimIndent()
@@ -145,6 +154,7 @@ private val CHARACTERS_QUERY = """
               id
               name { full }
               image { large }
+              description(asHtml: false)
             }
           }
         }
