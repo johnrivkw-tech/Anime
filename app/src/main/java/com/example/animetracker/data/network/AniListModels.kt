@@ -90,7 +90,11 @@ data class AniListMedia(
     val studios: AniListStudioConnection? = null,
     val trailer: AniListTrailer? = null,
     val relations: AniListRelationConnection? = null,
-    val streamingEpisodes: List<AniListStreamingEpisode> = emptyList()
+    val streamingEpisodes: List<AniListStreamingEpisode> = emptyList(),
+    // Only requested by DETAILS_QUERY (not the lighter list/search/discover
+    // queries), so these come back null everywhere else.
+    val popularity: Int? = null,
+    val favourites: Int? = null
 ) {
     /** Prefers the English localized title, falling back through romaji to native script. */
     val displayTitle: String
@@ -248,7 +252,7 @@ data class AniListRelationNode(
         get() = coverImage?.extraLarge ?: coverImage?.large
 }
 
-private fun String.cleanAniListDescription(): String = this
+internal fun String.cleanAniListDescription(): String = this
     .replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), "\n")
     .replace(Regex("</?(i|b|em|strong)>", RegexOption.IGNORE_CASE), "")
     .replace(Regex("<[^>]*>"), "")
@@ -273,10 +277,17 @@ data class AniListCharacterNode(
     val id: Int,
     val name: AniListCharacterName,
     val image: AniListCharacterImage?,
-    val favourites: Int = 0
+    val favourites: Int = 0,
+    // Only requested by CHARACTERS_QUERY (the Details screen's cast list),
+    // so this is null wherever else this node type is used (gacha roster,
+    // Favorite Characters search).
+    val description: String? = null
 ) {
     val displayName: String get() = name.full ?: "Unknown"
     val imageUrl: String? get() = image?.large
+
+    /** Plain-text bio; AniList's raw character description often has stray markup in it. */
+    val bio: String? get() = description?.cleanAniListDescription()
 }
 
 data class AniListCharacterName(val full: String?)
