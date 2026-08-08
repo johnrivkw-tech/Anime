@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -42,10 +43,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.Gradient
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MonetizationOn
@@ -54,13 +57,17 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Title
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.ViewQuilt
+import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -92,6 +99,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -597,6 +606,7 @@ private fun AppearanceTab(viewModel: AnimeViewModel) {
     val unlockedNavStyleNames by viewModel.unlockedNavStyleNames.collectAsState()
     val avatarFrame by viewModel.avatarFrame.collectAsState()
     val unlockedAvatarFrameNames by viewModel.unlockedAvatarFrameNames.collectAsState()
+    val displayName by viewModel.profileDisplayName.collectAsState()
 
     val visibleThemes = AppThemeOption.entries.filter { it.berriesCost <= 0 || unlockedThemeNames.contains(it.name) }
     val lockedThemeCount = AppThemeOption.entries.size - visibleThemes.size
@@ -610,10 +620,22 @@ private fun AppearanceTab(viewModel: AnimeViewModel) {
     val ownedFrames = AvatarFrame.entries.filter { it.berriesCost <= 0 || unlockedAvatarFrameNames.contains(it.name) }
     val lockedFrameCount = AvatarFrame.entries.size - ownedFrames.size
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        // Live hero preview — shows exactly how your picks look together, so
+        // Appearance stops feeling like a form and starts feeling like a studio.
+        AppearanceHeroPreview(
+            theme = selectedTheme,
+            font = appFont,
+            titleGradient = titleGradient,
+            nameGradient = nameGradient,
+            avatarFrame = avatarFrame,
+            displayName = displayName.ifBlank { "Rei" }
+        )
+
         AppearanceSection(
+            icon = Icons.Filled.Palette,
             title = "Theme",
-            subtitle = "Pick an accent that fits your vibe. Changes apply instantly across the app.",
+            subtitle = "Your accent across the whole app. Tap to preview instantly.",
             lockedHint = shopHint(lockedThemeCount, "theme")
         ) {
             ThemeGrid(
@@ -624,26 +646,28 @@ private fun AppearanceTab(viewModel: AnimeViewModel) {
         }
 
         AppearanceSection(
+            icon = Icons.Filled.AutoStories,
             title = "Font",
-            subtitle = "Changes the typeface across Home, Schedule, My List, Search, and Settings."
+            subtitle = "The typeface for every screen. \"Aa\" shows the vibe — titles use the full weight."
         ) {
             FontPickerRow(selected = appFont, onSelected = { viewModel.setAppFont(it) })
         }
 
         AppearanceSection(
+            icon = Icons.Filled.Wallpaper,
             title = "Background",
-            subtitle = "True Black saves battery on OLED screens. Midnight adds a bit of depth behind cards."
+            subtitle = "True Black = pure OLED black. Midnight = soft void with depth."
         ) {
-            SettingsChoicePicker(
-                options = listOf("True Black" to true, "Midnight" to false),
-                selected = trueBlack,
+            BackgroundPicker(
+                trueBlack = trueBlack,
                 onSelected = { viewModel.setTrueBlackBackground(it) }
             )
         }
 
         AppearanceSection(
+            icon = Icons.Filled.Title,
             title = "Screen Title Color",
-            subtitle = "Recolor each tab's big header using any Name Gradient you own.",
+            subtitle = "Recolor the big headers on Home / Search / Schedule.",
             lockedHint = shopHint(lockedGradientCount, "gradient")
         ) {
             GradientSwatchRow(
@@ -654,8 +678,9 @@ private fun AppearanceTab(viewModel: AnimeViewModel) {
         }
 
         AppearanceSection(
+            icon = Icons.Filled.Gradient,
             title = "Name Gradient",
-            subtitle = "Recolor your display name wherever it's shown.",
+            subtitle = "Your display name, everywhere it appears.",
             lockedHint = shopHint(lockedGradientCount, "gradient")
         ) {
             GradientSwatchRow(
@@ -666,8 +691,9 @@ private fun AppearanceTab(viewModel: AnimeViewModel) {
         }
 
         AppearanceSection(
+            icon = Icons.Filled.Style,
             title = "Nav Bar Style",
-            subtitle = "Change the look of the bar at the bottom of the screen.",
+            subtitle = "The bottom bar — solid, glass, dock, or a mythic animated one.",
             lockedHint = shopHint(lockedNavStyleCount, "style")
         ) {
             NavStyleSelectorRow(
@@ -678,8 +704,9 @@ private fun AppearanceTab(viewModel: AnimeViewModel) {
         }
 
         AppearanceSection(
+            icon = Icons.Filled.Person,
             title = "Avatar Frame",
-            subtitle = "A decorative ring around your profile photo.",
+            subtitle = "A ring around your profile photo on Profile & Settings.",
             lockedHint = shopHint(lockedFrameCount, "frame")
         ) {
             AvatarFrameSelectorRow(
@@ -687,6 +714,182 @@ private fun AppearanceTab(viewModel: AnimeViewModel) {
                 selected = avatarFrame,
                 onSelected = { viewModel.selectAvatarFrame(it) }
             )
+        }
+    }
+}
+
+@Composable
+private fun AppearanceHeroPreview(
+    theme: AppThemeOption,
+    font: AppFontOption,
+    titleGradient: NameGradient,
+    nameGradient: NameGradient,
+    avatarFrame: AvatarFrame,
+    displayName: String
+) {
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.dp,
+                brush = Brush.linearGradient(
+                    listOf(theme.primary.copy(alpha = 0.6f), theme.secondary.copy(alpha = 0.6f))
+                ),
+                shape = RoundedCornerShape(24.dp)
+            )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            theme.primary.copy(alpha = 0.18f),
+                            theme.secondary.copy(alpha = 0.12f),
+                            MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    )
+                )
+                .padding(16.dp)
+        ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(theme.primary)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "LIVE PREVIEW",
+                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.4.sp),
+                        fontWeight = FontWeight.Bold,
+                        color = theme.primary
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = theme.displayName,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(Modifier.height(14.dp))
+                // Fake header like Home/Search title does it
+                Text(
+                    text = "Home",
+                    style = titleGradient.textStyle(
+                        MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontFamily = font.fontFamily ?: FontFamily.Default
+                        )
+                    )
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Your feed, your colors, your type.",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontFamily = font.fontFamily ?: FontFamily.Default
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(14.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(contentAlignment = Alignment.Center) {
+                        AvatarGlowHalo(frame = avatarFrame, avatarSize = 44.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .border(width = 2.dp, brush = avatarFrame.brush(), shape = CircleShape)
+                                .padding(3.dp)
+                                .clip(CircleShape)
+                                .background(avatarFrame.brush()),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Filled.Person,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = displayName,
+                            style = nameGradient.textStyle(
+                                MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            )
+                        )
+                        Text(
+                            text = "Previewing as others see you",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BackgroundPicker(trueBlack: Boolean, onSelected: (Boolean) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+        listOf(
+            Triple("True Black", true, "Pure black — best for OLED"),
+            Triple("Midnight", false, "Soft void — more depth")
+        ).forEach { (label, value, desc) ->
+            val isSelected = value == trueBlack
+            val scale by animateFloatAsState(if (isSelected) 1f else 0.98f, label = "bgScale")
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                    else MaterialTheme.colorScheme.surface
+                ),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .scale(scale)
+                    .border(
+                        width = if (isSelected) 1.5.dp else 1.dp,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                    .clickable { onSelected(value) }
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                if (value) Brush.linearGradient(listOf(Color.Black, Color(0xFF0A0A0A)))
+                                else Brush.linearGradient(listOf(Color(0xFF0A0A12), Color(0xFF14141E)))
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(text = label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Text(text = desc, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
     }
 }
@@ -703,9 +906,12 @@ private fun shopHint(lockedCount: Int, noun: String): String? {
  * pickers, Nav Bar Style, Avatar Frame — shares this same card shell so
  * the tab reads as one coherent set of controls instead of loose text and
  * widgets stacked on the bare background.
+ * Now with an icon chip + tighter header so the tab doesn't read as 7
+ * identical gray cards.
  */
 @Composable
 private fun AppearanceSection(
+    icon: ImageVector,
     title: String,
     subtitle: String,
     lockedHint: String? = null,
@@ -714,34 +920,66 @@ private fun AppearanceSection(
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier
             .fillMaxWidth()
             .border(
                 width = 1.dp,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.13f),
                 shape = RoundedCornerShape(20.dp)
             )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.14f)
+                                )
+                            )
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
+                            shape = RoundedCornerShape(10.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(text = title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text(text = subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.10f))
             )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
-            )
+            Spacer(Modifier.height(14.dp))
             content()
             if (lockedHint != null) {
-                Text(
-                    text = lockedHint,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 12.dp)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(top = 12.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Icon(Icons.Filled.Star, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(text = lockedHint, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                }
             }
         }
     }
@@ -751,42 +989,66 @@ private fun AppearanceSection(
 private fun FontPickerRow(selected: AppFontOption, onSelected: (AppFontOption) -> Unit) {
     Row(
         modifier = Modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         AppFontOption.entries.forEach { font ->
             val isSelected = font == selected
+            val scale by animateFloatAsState(if (isSelected) 1.02f else 1f, label = "fontScale")
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .widthIn(min = 78.dp)
-                    .clip(RoundedCornerShape(14.dp))
+                    .scale(scale)
+                    .widthIn(min = 92.dp)
+                    .clip(RoundedCornerShape(16.dp))
                     .background(
-                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
-                        else MaterialTheme.colorScheme.surface
+                        if (isSelected) Brush.linearGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                            )
+                        ) else Brush.linearGradient(
+                            listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface)
+                        )
                     )
                     .border(
                         width = if (isSelected) 1.5.dp else 1.dp,
                         color = if (isSelected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(14.dp)
+                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.18f),
+                        shape = RoundedCornerShape(16.dp)
                     )
+                    .shadow(elevation = if (isSelected) 6.dp else 1.dp, shape = RoundedCornerShape(16.dp), clip = false)
                     .clickable { onSelected(font) }
-                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                    .padding(horizontal = 14.dp, vertical = 14.dp)
             ) {
                 Text(
-                    text = "Aa",
+                    text = "Rei",
                     fontFamily = font.fontFamily ?: FontFamily.Default,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
-                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = font.displayName,
+                    text = "Aa • 123",
+                    fontFamily = font.fontFamily ?: FontFamily.Default,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = font.displayName,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
     }
@@ -801,24 +1063,20 @@ private fun GradientSwatchRow(
 ) {
     Row(
         modifier = Modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         gradients.forEach { gradient ->
             val isSelected = gradient == selected
             val isClassic = gradient.colors.isEmpty()
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(64.dp)) {
+            val scale by animateFloatAsState(if (isSelected) 1.08f else 1f, label = "gradScale")
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .scale(scale)
+                        .size(56.dp)
+                        .shadow(elevation = if (isSelected) 8.dp else 2.dp, shape = CircleShape, clip = false)
                         .clip(CircleShape)
                         .background(
-                            // Both branches must resolve to the same type —
-                            // mixing a bare Color with a Brush here made the
-                            // whole expression infer as `Any`, which matches
-                            // neither of Modifier.background's overloads and
-                            // fails the build. Wrapping the classic swatch's
-                            // flat color as a same-color Brush keeps both
-                            // branches typed as Brush.
                             if (isClassic) {
                                 Brush.linearGradient(
                                     listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface)
@@ -829,36 +1087,68 @@ private fun GradientSwatchRow(
                         )
                         .border(
                             width = if (isSelected) 3.dp else 1.dp,
-                            color = if (isSelected) MaterialTheme.colorScheme.onBackground
-                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.outline.copy(alpha = 0.22f),
                             shape = CircleShape
                         )
                         .clickable { onSelected(gradient) },
                     contentAlignment = Alignment.Center
                 ) {
-                    when {
-                        isSelected -> Icon(
-                            imageVector = Icons.Filled.Check,
-                            contentDescription = "Selected",
-                            tint = if (isClassic) MaterialTheme.colorScheme.onSurface else Color.White,
-                            modifier = Modifier.size(18.dp)
+                    // glossy highlight for non-classic
+                    if (!isClassic) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(
+                                    Brush.radialGradient(
+                                        colors = listOf(Color.White.copy(alpha = 0.22f), Color.Transparent),
+                                        center = Offset(18f, 18f),
+                                        radius = 42f
+                                    )
+                                )
                         )
+                    }
+                    when {
+                        isSelected -> Box(
+                            modifier = Modifier
+                                .size(26.dp)
+                                .background(Color.White.copy(alpha = 0.92f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = "Selected",
+                                tint = if (isClassic) MaterialTheme.colorScheme.onSurface else Color(0xFF222222),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                         isClassic -> Text(
                             text = "Aa",
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-                Text(
-                    text = gradient.displayName,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 6.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                            else MaterialTheme.colorScheme.surfaceVariant
+                        )
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = gradient.displayName,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                    )
+                }
             }
         }
     }
@@ -1059,43 +1349,81 @@ private fun BerriesShopTab(viewModel: AnimeViewModel) {
     fun isAvatarFrameUnlocked(frame: AvatarFrame) = frame.berriesCost <= 0L || unlockedAvatarFrameNames.contains(frame.name)
     fun isNameGradientUnlocked(gradient: NameGradient) = gradient.berriesCost <= 0L || unlockedNameGradientNames.contains(gradient.name)
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(bottom = 4.dp)
+    // Premium balance hero — not just a row with an icon, but a real
+    // storefront header with gradient, shine, and context about earning.
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(elevation = 8.dp, shape = RoundedCornerShape(24.dp), clip = false)
     ) {
-        Icon(
-            imageVector = Icons.Filled.MonetizationOn,
-            contentDescription = null,
-            tint = Color(0xFFFFC947),
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = "%,d Berries".format(balance),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            Color(0xFFFFC947),
+                            Color(0xFFFF8A3C),
+                            MaterialTheme.colorScheme.primary
+                        )
+                    )
+                )
+                .padding(20.dp)
+        ) {
+            // Soft white shine overlay
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(Color.White.copy(alpha = 0.18f), Color.Transparent),
+                            center = Offset(0f, 0f),
+                            radius = 420f
+                        )
+                    )
+            )
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.22f))
+                            .border(width = 1.dp, color = Color.White.copy(alpha = 0.5f), shape = CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Filled.MonetizationOn, contentDescription = null, tint = Color.White, modifier = Modifier.size(26.dp))
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column {
+                        Text(text = "Your Berries", style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.85f), letterSpacing = 0.8.sp)
+                        Text(text = formatBerries(balance), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = "Earned from watching episodes & completing shows. Spend here on exclusive cosmetics, or save for gacha pulls in Games.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.9f),
+                    lineHeight = 16.sp
+                )
+            }
+        }
     }
-    Text(
-        text = "Earned from watching episodes and completing shows. Spend them here on exclusive cosmetics, or in Games on gacha pulls.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
-    )
 
-    Text(
-        text = "Nav Bar Styles",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold
+    Spacer(Modifier.height(22.dp))
+
+    // Category 1 — Nav Bar Styles
+    ShopCategoryHeader(
+        icon = Icons.Filled.Style,
+        title = "Nav Bar Styles",
+        subtitle = "The dock at the bottom — from clean to mythic animated.",
+        countText = "${NavBarStyle.entries.count { it.berriesCost > 0 }} exclusives"
     )
-    Text(
-        text = "Change the look of the bar at the bottom of the screen.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
-    )
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        NavBarStyle.entries.forEach { style ->
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        NavBarStyle.entries.filter { it.berriesCost > 0 }.forEach { style ->
             NavStyleShopCard(
                 style = style,
                 owned = isNavStyleUnlocked(style),
@@ -1104,28 +1432,24 @@ private fun BerriesShopTab(viewModel: AnimeViewModel) {
                 onSelect = { viewModel.selectNavBarStyle(style) },
                 onPurchase = {
                     val ok = viewModel.purchaseNavStyle(style)
-                    if (!ok) {
-                        Toast.makeText(context, "Not enough berries yet — keep watching!", Toast.LENGTH_SHORT).show()
-                    }
+                    if (!ok) Toast.makeText(context, "Not enough berries — keep watching!", Toast.LENGTH_SHORT).show()
                 }
             )
         }
+        if (NavBarStyle.entries.none { it.berriesCost > 0 }) {
+            Text(text = "All styles unlocked!", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 
-    Spacer(modifier = Modifier.height(28.dp))
+    Spacer(Modifier.height(26.dp))
 
-    Text(
-        text = "Avatar Frames",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold
+    ShopCategoryHeader(
+        icon = Icons.Filled.Person,
+        title = "Avatar Frames",
+        subtitle = "Signature rings for your profile photo.",
+        countText = "${AvatarFrame.entries.count { it.berriesCost > 0 }} exclusives"
     )
-    Text(
-        text = "A decorative ring around your profile photo, in Settings and on your Profile page.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
-    )
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         AvatarFrame.entries.filter { it.berriesCost > 0 }.forEach { frame ->
             AvatarFrameShopCard(
                 frame = frame,
@@ -1135,28 +1459,21 @@ private fun BerriesShopTab(viewModel: AnimeViewModel) {
                 onSelect = { viewModel.selectAvatarFrame(frame) },
                 onPurchase = {
                     val ok = viewModel.purchaseAvatarFrame(frame)
-                    if (!ok) {
-                        Toast.makeText(context, "Not enough berries yet — keep watching!", Toast.LENGTH_SHORT).show()
-                    }
+                    if (!ok) Toast.makeText(context, "Not enough berries — keep watching!", Toast.LENGTH_SHORT).show()
                 }
             )
         }
     }
 
-    Spacer(modifier = Modifier.height(28.dp))
+    Spacer(Modifier.height(26.dp))
 
-    Text(
-        text = "Name Gradient",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold
+    ShopCategoryHeader(
+        icon = Icons.Filled.Gradient,
+        title = "Name Gradients",
+        subtitle = "Legendary Blaze adds a moving gold shine + fire glow.",
+        countText = "${NameGradient.entries.count { it.berriesCost > 0 }} exclusives"
     )
-    Text(
-        text = "Recolor your display name wherever it shows. Legendary Blaze adds a moving gold shine and a fire glow.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
-    )
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         NameGradient.entries.filter { it.berriesCost > 0 }.forEach { gradient ->
             NameGradientShopCard(
                 gradient = gradient,
@@ -1166,28 +1483,21 @@ private fun BerriesShopTab(viewModel: AnimeViewModel) {
                 onSelect = { viewModel.selectNameGradient(gradient) },
                 onPurchase = {
                     val ok = viewModel.purchaseNameGradient(gradient)
-                    if (!ok) {
-                        Toast.makeText(context, "Not enough berries yet — keep watching!", Toast.LENGTH_SHORT).show()
-                    }
+                    if (!ok) Toast.makeText(context, "Not enough berries — keep watching!", Toast.LENGTH_SHORT).show()
                 }
             )
         }
     }
 
-    Spacer(modifier = Modifier.height(28.dp))
+    Spacer(Modifier.height(26.dp))
 
-    Text(
-        text = "Exclusive Themes",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold
+    ShopCategoryHeader(
+        icon = Icons.Filled.Palette,
+        title = "Exclusive Themes",
+        subtitle = "Rare palettes you won't find in Appearance.",
+        countText = "${AppThemeOption.entries.count { it.berriesCost > 0 }} exclusives"
     )
-    Text(
-        text = "Rare accent colors you won't find in the free Appearance picker.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
-    )
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         AppThemeOption.entries.filter { it.berriesCost > 0 }.forEach { theme ->
             ThemeShopCard(
                 theme = theme,
@@ -1197,11 +1507,57 @@ private fun BerriesShopTab(viewModel: AnimeViewModel) {
                 onSelect = { viewModel.setTheme(theme) },
                 onPurchase = {
                     val ok = viewModel.purchaseTheme(theme)
-                    if (!ok) {
-                        Toast.makeText(context, "Not enough berries yet — keep watching!", Toast.LENGTH_SHORT).show()
-                    }
+                    if (!ok) Toast.makeText(context, "Not enough berries — keep watching!", Toast.LENGTH_SHORT).show()
                 }
             )
+        }
+    }
+
+    // Also surface free nav styles so user knows what they have
+    Spacer(Modifier.height(18.dp))
+    Text(
+        text = "Free styles are already in Appearance → Nav Bar Style",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    )
+}
+
+@Composable
+private fun ShopCategoryHeader(icon: ImageVector, title: String, subtitle: String, countText: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f), MaterialTheme.colorScheme.secondary.copy(alpha = 0.14f))
+                    )
+                )
+                .border(width = 1.dp, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f), shape = RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(text = countText, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                }
+            }
+            Text(text = subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -1249,124 +1605,81 @@ private fun NavStyleShopCard(
     onSelect: () -> Unit,
     onPurchase: () -> Unit
 ) {
+    val rarity = rarityForBerriesCost(style.berriesCost)
+    val isPremium = rarity == GachaRarity.LEGENDARY || rarity == GachaRarity.MYTHIC
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isPremium) 6.dp else 2.dp),
         modifier = Modifier
             .fillMaxWidth()
             .then(rarityCardBorder(style.berriesCost))
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp)
-        ) {
-            // Tiny live preview swatch of the bar treatment itself.
-            Box(
-                modifier = Modifier
-                    .size(width = 56.dp, height = 32.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(
-                        when (style) {
-                            NavBarStyle.SOLID -> Brush.linearGradient(
-                                listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface)
-                            )
-                            NavBarStyle.GRADIENT -> Brush.horizontalGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f)
-                                )
-                            )
-                            NavBarStyle.GLASS -> Brush.linearGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.4f),
-                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
-                                )
-                            )
-                            NavBarStyle.FLOATING_DOTS -> Brush.linearGradient(
-                                listOf(Color.Transparent, Color.Transparent)
-                            )
-                            NavBarStyle.DOCK -> Brush.linearGradient(
-                                listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface)
-                            )
-                            NavBarStyle.UNDERLINE -> Brush.linearGradient(
-                                listOf(Color.Transparent, Color.Transparent)
-                            )
-                            NavBarStyle.OUTLINE -> Brush.linearGradient(
-                                listOf(Color.Transparent, Color.Transparent)
-                            )
-                            NavBarStyle.SEGMENTED -> Brush.linearGradient(
-                                listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface)
-                            )
-                            NavBarStyle.NOTCH -> Brush.radialGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                    MaterialTheme.colorScheme.surface
-                                )
-                            )
-                            NavBarStyle.BUBBLE_POP -> Brush.linearGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
-                                    MaterialTheme.colorScheme.surface
-                                )
-                            )
-                            NavBarStyle.ISLANDS -> Brush.linearGradient(
-                                listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface)
-                            )
-                            // Mythic previews get a real gradient sweep instead of a
-                            // flat swatch, so they read as noticeably fancier even
-                            // before you tap in to see the animated version.
-                            NavBarStyle.AURORA_DRIFT -> Brush.horizontalGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
-                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.75f),
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
-                                )
-                            )
-                            NavBarStyle.VOID_RIFT -> Brush.radialGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f),
-                                    Color(0xFF0A0912)
-                                )
-                            )
-                        }
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = when (style) {
-                            NavBarStyle.FLOATING_DOTS, NavBarStyle.UNDERLINE, NavBarStyle.OUTLINE ->
-                                Color.Transparent
-                            NavBarStyle.SOLID ->
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                            NavBarStyle.AURORA_DRIFT, NavBarStyle.VOID_RIFT ->
-                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
-                            else ->
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                        },
-                        shape = RoundedCornerShape(10.dp)
-                    )
-            )
-            Spacer(modifier = Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = style.displayName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                RarityTag(style.berriesCost)
-                Text(
-                    text = style.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp)
+        Column {
+            if (isPremium) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .background(Brush.horizontalGradient(listOf(Color(rarity.colorHex), Color(rarity.colorHex).copy(alpha = 0.6f))))
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            ShopActionButton(
-                owned = owned,
-                selected = selected,
-                cost = style.berriesCost,
-                canAfford = canAfford,
-                onSelect = onSelect,
-                onPurchase = onPurchase
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(width = 64.dp, height = 38.dp)
+                        .shadow(elevation = 4.dp, shape = RoundedCornerShape(12.dp), clip = false)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            when (style) {
+                                NavBarStyle.SOLID -> Brush.linearGradient(listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface))
+                                NavBarStyle.GRADIENT -> Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f)))
+                                NavBarStyle.GLASS -> Brush.linearGradient(listOf(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f), MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)))
+                                NavBarStyle.FLOATING_DOTS -> Brush.linearGradient(listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surfaceVariant))
+                                NavBarStyle.DOCK -> Brush.linearGradient(listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface))
+                                NavBarStyle.UNDERLINE -> Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                                NavBarStyle.OUTLINE -> Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                                NavBarStyle.SEGMENTED -> Brush.linearGradient(listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface))
+                                NavBarStyle.NOTCH -> Brush.radialGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.55f), MaterialTheme.colorScheme.surface))
+                                NavBarStyle.BUBBLE_POP -> Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), MaterialTheme.colorScheme.surface))
+                                NavBarStyle.ISLANDS -> Brush.linearGradient(listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface))
+                                NavBarStyle.AURORA_DRIFT -> Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f), MaterialTheme.colorScheme.secondary.copy(alpha = 0.85f), MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)))
+                                NavBarStyle.VOID_RIFT -> Brush.radialGradient(listOf(MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f), Color(0xFF0A0912)))
+                            }
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = when (style) {
+                                NavBarStyle.FLOATING_DOTS, NavBarStyle.UNDERLINE, NavBarStyle.OUTLINE -> MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+                                NavBarStyle.AURORA_DRIFT, NavBarStyle.VOID_RIFT -> Color(rarity.colorHex).copy(alpha = 0.6f)
+                                else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+                            },
+                            shape = RoundedCornerShape(12.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (style == NavBarStyle.FLOATING_DOTS) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            repeat(3) { Box(Modifier.size(6.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), CircleShape)) }
+                        }
+                    } else if (style == NavBarStyle.UNDERLINE) {
+                        Box(Modifier.fillMaxWidth(0.7f).height(2.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp)).align(Alignment.BottomCenter))
+                    }
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = style.displayName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    RarityTag(style.berriesCost)
+                    Text(text = style.description, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                ShopActionButton(owned = owned, selected = selected, cost = style.berriesCost, canAfford = canAfford, onSelect = onSelect, onPurchase = onPurchase)
+            }
         }
     }
 }
@@ -1380,46 +1693,38 @@ private fun ThemeShopCard(
     onSelect: () -> Unit,
     onPurchase: () -> Unit
 ) {
+    val rarity = rarityForBerriesCost(theme.berriesCost)
+    val isPremium = rarity == GachaRarity.LEGENDARY || rarity == GachaRarity.MYTHIC
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(rarityCardBorder(theme.berriesCost))
+        shape = RoundedCornerShape(18.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isPremium) 6.dp else 2.dp),
+        modifier = Modifier.fillMaxWidth().then(rarityCardBorder(theme.berriesCost))
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(width = 56.dp, height = 32.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Brush.horizontalGradient(listOf(theme.primary, theme.secondary)))
-                    .border(width = 1.dp, color = theme.primary.copy(alpha = 0.6f), shape = RoundedCornerShape(10.dp))
-            )
-            Spacer(modifier = Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = theme.displayName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                RarityTag(theme.berriesCost)
-                Text(
-                    text = "Exclusive accent + surface palette",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
+        Column {
+            if (isPremium) Box(Modifier.fillMaxWidth().height(4.dp).background(Brush.horizontalGradient(listOf(Color(rarity.colorHex), Color(rarity.colorHex).copy(alpha = 0.5f)))))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(14.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(width = 64.dp, height = 40.dp)
+                        .shadow(6.dp, RoundedCornerShape(12.dp), clip = false)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Brush.horizontalGradient(listOf(theme.primary, theme.secondary)))
+                        .border(width = 1.dp, color = Color.White.copy(alpha = 0.22f), shape = RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(Modifier.matchParentSize().background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.16f), Color.Transparent))))
+                    Icon(Icons.Filled.Palette, contentDescription = null, tint = Color.White.copy(alpha = 0.92f), modifier = Modifier.size(18.dp))
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = theme.displayName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    RarityTag(theme.berriesCost)
+                    Text(text = "Exclusive accent + surface", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+                ShopActionButton(owned = owned, selected = selected, cost = theme.berriesCost, canAfford = canAfford, onSelect = onSelect, onPurchase = onPurchase)
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            ShopActionButton(
-                owned = owned,
-                selected = selected,
-                cost = theme.berriesCost,
-                canAfford = canAfford,
-                onSelect = onSelect,
-                onPurchase = onPurchase
-            )
         }
     }
 }
@@ -1433,55 +1738,47 @@ private fun AvatarFrameShopCard(
     onSelect: () -> Unit,
     onPurchase: () -> Unit
 ) {
+    val rarity = rarityForBerriesCost(frame.berriesCost)
+    val isPremium = rarity == GachaRarity.LEGENDARY || rarity == GachaRarity.MYTHIC
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(rarityCardBorder(frame.berriesCost))
+        shape = RoundedCornerShape(18.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isPremium) 6.dp else 2.dp),
+        modifier = Modifier.fillMaxWidth().then(rarityCardBorder(frame.berriesCost))
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                AvatarGlowHalo(frame = frame, avatarSize = 36.dp)
+        Column {
+            if (isPremium) Box(Modifier.fillMaxWidth().height(4.dp).background(Brush.horizontalGradient(listOf(Color(rarity.colorHex), Color(rarity.colorHex).copy(alpha = 0.5f)))))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(14.dp)) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(52.dp)
+                        .shadow(4.dp, CircleShape, clip = false)
                         .clip(CircleShape)
-                        .border(
-                            width = if (frame.glow) 3.dp else 2.dp,
-                            brush = frame.brush(),
-                            shape = CircleShape
+                        .background(MaterialTheme.colorScheme.surface),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        AvatarGlowHalo(frame = frame, avatarSize = 48.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .border(width = if (frame.glow) 3.dp else 2.dp, brush = frame.brush(), shape = CircleShape)
+                                .padding(3.dp)
+                                .clip(CircleShape)
+                                .background(frame.brush())
                         )
-                        .padding(3.dp)
-                        .clip(CircleShape)
-                        .background(frame.brush())
-                )
+                    }
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = frame.displayName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    RarityTag(frame.berriesCost)
+                    Text(text = "Avatar ring • ${if (frame.glow) "glowing" else "matte"}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+                ShopActionButton(owned = owned, selected = selected, cost = frame.berriesCost, canAfford = canAfford, onSelect = onSelect, onPurchase = onPurchase)
             }
-            Spacer(modifier = Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = frame.displayName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                RarityTag(frame.berriesCost)
-                Text(
-                    text = "Ring for your profile photo",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            ShopActionButton(
-                owned = owned,
-                selected = selected,
-                cost = frame.berriesCost,
-                canAfford = canAfford,
-                onSelect = onSelect,
-                onPurchase = onPurchase
-            )
         }
     }
 }
@@ -1495,55 +1792,40 @@ private fun NameGradientShopCard(
     onSelect: () -> Unit,
     onPurchase: () -> Unit
 ) {
+    val rarity = rarityForBerriesCost(gradient.berriesCost)
+    val isPremium = rarity == GachaRarity.LEGENDARY || rarity == GachaRarity.MYTHIC
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(rarityCardBorder(gradient.berriesCost))
+        shape = RoundedCornerShape(18.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isPremium) 6.dp else 2.dp),
+        modifier = Modifier.fillMaxWidth().then(rarityCardBorder(gradient.berriesCost))
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp)
-        ) {
-            // Live preview — this renders through the exact same
-            // textStyle() the real name uses, shine/glow included, so
-            // what's shown here is exactly what you'd get.
-            Box(
-                modifier = Modifier
-                    .size(width = 56.dp, height = 32.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.background),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Aa",
-                    style = gradient.textStyle(MaterialTheme.typography.titleLarge),
-                    fontWeight = FontWeight.ExtraBold
-                )
+        Column {
+            if (isPremium) Box(Modifier.fillMaxWidth().height(4.dp).background(Brush.horizontalGradient(listOf(Color(rarity.colorHex), Color(rarity.colorHex).copy(alpha = 0.5f)))))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(14.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(width = 72.dp, height = 42.dp)
+                        .shadow(6.dp, RoundedCornerShape(12.dp), clip = false)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (gradient.colors.isEmpty()) MaterialTheme.colorScheme.surface
+                            else Brush.linearGradient(gradient.colors)
+                        )
+                        .border(width = 1.dp, color = if (gradient.colors.isEmpty()) MaterialTheme.colorScheme.outline.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.22f), shape = RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "Rei", style = gradient.textStyle(MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold, color = if (gradient.colors.isEmpty()) MaterialTheme.colorScheme.onSurface else Color.White)), maxLines = 1)
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = gradient.displayName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    RarityTag(gradient.berriesCost)
+                    Text(text = if (gradient.fireGlow) "Animated shine + fire glow" else "Colors your display name", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+                ShopActionButton(owned = owned, selected = selected, cost = gradient.berriesCost, canAfford = canAfford, onSelect = onSelect, onPurchase = onPurchase)
             }
-            Spacer(modifier = Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = gradient.displayName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                RarityTag(gradient.berriesCost)
-                Text(
-                    text = if (gradient.fireGlow) "Animated shine + fire glow" else "Colors your display name",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            ShopActionButton(
-                owned = owned,
-                selected = selected,
-                cost = gradient.berriesCost,
-                canAfford = canAfford,
-                onSelect = onSelect,
-                onPurchase = onPurchase
-            )
         }
     }
 }
@@ -1559,25 +1841,40 @@ private fun ShopActionButton(
     onPurchase: () -> Unit
 ) {
     when {
-        selected -> AssistChip(
-            onClick = {},
-            enabled = false,
-            leadingIcon = {
-                Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(16.dp))
-            },
-            label = { Text("Active") }
-        )
-        owned -> OutlinedButton(onClick = onSelect) {
-            Text("Select")
-        }
-        else -> Button(
-            onClick = onPurchase,
-            enabled = canAfford,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        selected -> Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
-            Icon(Icons.Filled.Lock, contentDescription = null, modifier = Modifier.size(14.dp))
-            Spacer(modifier = Modifier.width(6.dp))
-            Text("%,d".format(cost))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+                Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Active", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color.White)
+            }
+        }
+        owned -> OutlinedButton(
+            onClick = onSelect,
+            shape = RoundedCornerShape(20.dp),
+            border = androidx.compose.foundation.BorderStroke(1.2.dp, MaterialTheme.colorScheme.primary)
+        ) {
+            Text("Equip", fontWeight = FontWeight.Bold)
+        }
+        else -> {
+            val btnBrush = if (canAfford) Brush.horizontalGradient(listOf(Color(0xFFFFC947), Color(0xFFFF8A3C))) else Brush.linearGradient(listOf(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.surfaceVariant))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(btnBrush)
+                    .border(width = 1.dp, color = if (canAfford) Color.White.copy(alpha = 0.35f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), shape = RoundedCornerShape(20.dp))
+                    .clickable(enabled = canAfford, onClick = onPurchase)
+                    .padding(horizontal = 14.dp, vertical = 9.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.MonetizationOn, contentDescription = null, tint = if (canAfford) Color.White else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(text = formatBerries(cost), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.ExtraBold, color = if (canAfford) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
     }
 }
@@ -2542,9 +2839,13 @@ private fun ThemeGrid(
 
 @Composable
 private fun ThemeSwatch(theme: AppThemeOption, isSelected: Boolean, onClick: () -> Unit) {
+    val scale by animateFloatAsState(if (isSelected) 1.03f else 1f, label = "themeScale")
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick)
+        modifier = Modifier
+            .scale(scale)
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
     ) {
         Box(
             modifier = Modifier
@@ -2553,27 +2854,48 @@ private fun ThemeSwatch(theme: AppThemeOption, isSelected: Boolean, onClick: () 
                 .clip(RoundedCornerShape(20.dp))
                 .background(Brush.linearGradient(listOf(theme.primary, theme.secondary)))
                 .border(
-                    width = if (isSelected) 3.dp else 0.dp,
-                    color = if (isSelected) MaterialTheme.colorScheme.onBackground else Color.Transparent,
+                    width = if (isSelected) 2.5.dp else 1.dp,
+                    color = if (isSelected) Color.White else theme.primary.copy(alpha = 0.35f),
                     shape = RoundedCornerShape(20.dp)
-                ),
+                )
+                .shadow(elevation = if (isSelected) 8.dp else 2.dp, shape = RoundedCornerShape(20.dp), clip = false),
             contentAlignment = Alignment.Center
         ) {
+            // inner highlight gloss
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(Color.White.copy(alpha = 0.18f), Color.Transparent)
+                        )
+                    )
+            )
             if (isSelected) {
                 Box(
                     modifier = Modifier
-                        .size(28.dp)
-                        .background(theme.background.copy(alpha = 0.85f), CircleShape),
+                        .size(32.dp)
+                        .shadow(4.dp, CircleShape)
+                        .background(Color.White, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.Check, contentDescription = "Selected", tint = theme.primary)
+                    Icon(Icons.Filled.Check, contentDescription = "Selected", tint = theme.primary, modifier = Modifier.size(18.dp))
                 }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(Color.White.copy(alpha = 0.9f), CircleShape)
+                )
             }
         }
         Text(
             text = theme.displayName,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(top = 6.dp)
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(top = 7.dp),
+            maxLines = 1
         )
     }
 }
